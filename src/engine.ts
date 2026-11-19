@@ -51,8 +51,8 @@ const updates: ((dt: number) => void)[] = [];
 const resizers: ((w: number, h: number) => void)[] = [];
 
 /** Creates the context, builds the plan (SEED), uploads the cell texture, sets the quality for the
- *  device (0 on a touch-first device, else 2) and a default post that copies the scene to the
- *  canvas. Returns false when WebGL2 is missing; then nothing else may be called.
+ *  device (0 on a touch-first device, else 2) and, in DEV builds only, a default post that copies
+ *  the scene to the canvas. Returns false when WebGL2 is missing; then nothing else may be called.
  *  Call first, before any init(). `if (!boot(canvas)) showMessage();` */
 export function boot(c: HTMLCanvasElement): boolean {
   canvas = c;
@@ -60,14 +60,18 @@ export function boot(c: HTMLCanvasElement): boolean {
   gl.bindBufferBase(35345, 0, gl.createBuffer()); // UNIFORM_BUFFER, binding point 0 holds F
   buildPlan(SEED);
   cellTex = tex(CELLS, CELLS, cells);
-  const p = prog(blit, blit);
-  setPost((s) => {
-    bindTarget(null);
-    gl.useProgram(p);
-    bindTex(0, s);
-    state(FULL);
-    tri();
-  });
+  // The plain blit is for the harness only (`post=0`); the shipped file always has post, which
+  // replaces it, so it is left out of the packed build (T14: saved its bytes).
+  if (DEV) {
+    const p = prog(blit, blit);
+    setPost((s) => {
+      bindTarget(null);
+      gl.useProgram(p);
+      bindTex(0, s);
+      state(FULL);
+      tri();
+    });
+  }
   // Direction to the sun: low over the horizon, straight ahead at yaw 0.
   F[U_SUN + 1] = 0.1;
   F[U_SUN + 2] = -0.995;
