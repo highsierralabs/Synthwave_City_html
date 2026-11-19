@@ -1,7 +1,7 @@
 ---
 id: T14-squeeze-release
 title: Ledger, cut ladder and release
-status: in-progress
+status: done
 depends_on: [T13]
 owns: [SIZE.md, README.md, LICENSE, docs/release/**, plans/T14-squeeze-release.md]
 reads: [architecture.md, Agents.md, src/**, tools/**, scripts/**, plans/**]
@@ -138,11 +138,103 @@ Each squeeze step is one commit, so any of them can be reverted alone.
 - [x] 2026-11-19 M2 S01 zopfli iterations: no gain (log in `SIZE.md`).
 - [x] 2026-11-19 M2 S02 terser option sets and esbuild's minifier: no gain.
 - [x] 2026-11-19 M2 S03 glslmin names locals per function scope: 17,538 -> 17,224 (-314). Kept.
+- [x] 2026-11-19 M2 S04 locals ordered by whole-corpus count: +18, reverted.
+- [x] 2026-11-19 M2 S05 flat packed program (no IIFE, no "use strict"): 17,224 -> 17,202 (-22). Kept.
+- [x] 2026-11-19 M2 S06 engine blit DEV-only: 17,202 -> 17,128 (-74). Kept.
+- [x] 2026-11-19 Item 3: frame loop stops after context loss: 17,128 -> 17,146 (+18). Kept.
+- [x] 2026-11-19 Item 1: linear unpacker `utf16l` built as a packer option, start-up measured at 1x, 4x,
+  6x; not shipped (+100 bytes).
+- [x] 2026-11-19 M3 Roadroller 2.1.0 in `.tmp/T14/rr`: 14,978 bytes, 4.2 s first frame at 4x. Not
+  adopted.
+- [x] 2026-11-19 Item 2: draw calls counted (34 at q2, 23 at q0); left as they are, reason in `SIZE.md`.
+- [x] 2026-11-19 Item 4: README pictures re-encoded as JPEG into `docs/release/screenshots/`
+  (1.18 MB for five, against 8.3 MB of PNG); T13's PNGs left untouched.
+- [x] 2026-11-19 M4 ladder: 15 rungs built, smoke-tested and photographed (17,146 down to 12,370).
+- [x] 2026-11-19 M5 README, LICENSE, SIZE.md, `docs/release/` (product, twin, smallest rung, ladder
+  sheets, measurement scripts); tracked files scanned; final check, verify and smoke pass.
 
 ## 9. Surprises and discoveries
 
+- **Locals were the biggest lossless lever left.** glslmin gave every identifier in every shader its
+  own name from one global map, so the parameters and locals of every function took names from the
+  same long list, many of them two letters. Naming them per function scope saved 314 bytes, more than
+  every other step together. Evidence: S03 in `SIZE.md`; `npm run verify` 0 differing pixels.
+- **"core" in `npm run size` fell by 1,708 bytes when the blit went DEV-only, but only 74 were
+  saved.** With every module stubbed and no blit, no shader is compiled, so `common.glsl` is now
+  charged to the layers. The row is an attribution artefact, not a measure of the core's own code.
+- **A Playwright wait calls `window.eval`.** A first start-up timing showed the first frame before
+  the payload's eval, because a later `eval` call overwrote the time stamp; recording only the first
+  call fixed it (`startup.mjs`).
+- **The cold first page costs about a second.** The first navigation in a fresh browser took 1.1 to
+  1.2 s to the first frame, the warm ones 0.1 s; the tables use warm runs after one discarded load.
+- **Six of the fifteen rungs change no pixel** (shell, free flight, moods at mood 0, the second
+  station, the touch bar, the plain track): their savings are invisible in pictures by construction.
+- **The pictures are dominated by grain.** T13's PNGs are 1.5 to 1.8 MB because film grain defeats
+  PNG; JPEG at quality 0.85 keeps the look at about 0.2 MB each (compared by eye on `skyline`).
+
 ## 10. Decision log
+
+| Date | Decision | Reason |
+|---|---|---|
+| 2026-11-19 | Ship the quadratic unpacker; keep `utf16l` as a packer option | First frame 466 ms at 6x throttle against 302 ms for linear; both far inside the 1 s budget, and linear costs 100 bytes. A throttled desktop is not a phone: the operator's phone decides |
+| 2026-11-19 | Do not adopt Roadroller | 12.6% smaller, but 3.9 to 4.2 s to the first frame at 4x (the plan's bar is about 3 s) and a 153 MB decoder by default. Listed for the operator |
+| 2026-11-19 | Keep 34 draw calls | No merge found that also saves bytes; the frame clock held on every rung; rungs from r11 down are at 19 or fewer |
+| 2026-11-19 | Fix the context-loss loop (+18 bytes) | Section 12 asks the app to stop; T12 found it did not |
+| 2026-11-19 | Roadroller installed only in `.tmp/T14/rr` with `--ignore-scripts`, never in `package.json` | Agents.md forbids adding development packages outside T00; the experiment needed the tool, the project does not |
+| 2026-11-19 | Ladder rungs as scratch copies under `.tmp/T14/ladder/`, defined in one script kept as `docs/release/scripts/ladder.mjs` | No feature flags in the shipped sources; every rung reproducible from the script |
+| 2026-11-19 | README pictures as JPEG copies under `docs/release/screenshots/`; T13's PNGs untouched | 8.3 MB of pictures for a 17 kB product; `docs/screenshots/` is T13's path |
+| 2026-11-19 | The shipped file stays the full build | The plan says so unless the operator picks a lower rung |
+| 2026-11-19 | The two demos that prompted the project are credited without names | No record in the repository names them; not guessed |
 
 ## 11. Contract change requests
 
+None.
+
 ## 12. Outcomes and retrospective
+
+**Result against Purpose.** Answered with measurements: the shipped file is **17,146 bytes** with
+every feature (from 17,538: -410 of savings and +18 for a robustness fix), and the smallest rung built
+that still passes the seven-point checklist, as far as it could be judged here, is **12,370 bytes**
+(rung 14). The ladder in `SIZE.md` gives the bytes of every step between them and what a viewer loses
+at each. Points 6 and 7 of the checklist were checked only by script; the operator's ears and phone
+are the open checks. No contract change was needed: `src/engine.ts` and `tools/` changed inside this
+task's serial window with every export signature unchanged.
+
+**Measured bytes.** Budget 0 (this task ships nothing of its own). Squeeze: S03 -314, S05 -22, S06
+-74, item 3 +18. Per-module table before and after in `SIZE.md`.
+
+**Acceptance evidence (2026-11-19, this machine).**
+
+- `npm run build`: `dist/synthwave-city.html 17,146 bytes`, change 0 on a rebuild; ascii twin 22,253.
+  `docs/release/synthwave-city.html` and `.safe.html` are byte-identical to `dist/` (`cmp`).
+- `npm run check`: typecheck ok, tests 112 passed, import rules ok, plans:check ok, `CHECK OK`.
+- `npm run verify`: four views, `same` in each, `VERIFY OK`; with `--sabotage` 43,770 to 292,944
+  differing pixels per view and `VERIFY FAILED`, so the gate still fails when it should after the
+  glslmin change.
+- `npm run smoke`: renderer ANGLE NVIDIA RTX 4070 SUPER D3D11, canvas 1920x1080, 638 frames in 5 s,
+  p95 8.1 ms, `SMOKE OK`; the same on `docs/release/synthwave-city.html`.
+- `node tools/glslmin/browser-test.mjs`: `PASS: 31 programs` (the street shader files do not build on
+  their own, as before: their layer concatenates them with `car.glsl`).
+- New tests seen failing before passing: the two local-name tests (reuse disabled; shadow guard
+  removed) and the `utf16l` round trip (decoder block step sabotaged).
+- Ladder: 15 rungs, every one `typecheck ok`, `SMOKE OK`, three shots, AudioContext `running` after a
+  click with 60 to 62 sources in 4 s. Rungs 0 and 14 also under phone emulation (412x915, scale
+  2.625, touch): audio started on a tap, `SMOKE OK`. Full-size pictures of rung 13 (= rung 14) opened
+  and judged point by point in `SIZE.md`.
+- Tracked files scanned for user-home paths, host names, addresses and secrets: none found. Absolute
+  paths to the sibling project remain as records in `Agents.md` (lines 12, 92) and one line each in
+  `plans/T00`, `T01`, `T04`, `T05`, `T06`, `T07`, `T09`, `T13`, and in code at
+  `tools/pack/browser-test.mjs:34` (T01's stand-in input). `127.0.0.1` appears in `scripts/dev.mjs`
+  (the dev server). Tracked PNGs carry no text chunks.
+
+**Not verified.** Firefox, Safari, any real phone or tablet; start-up on a phone; whether the music
+is good; GPU frame time anywhere but this RTX (headless rAF ticks at 8 ms); point 1 on rung 14 with a
+frame sequence (inferred from unchanged tour and placement code); window-property collisions of the
+flat program in browsers other than Chromium; the marginal cost of sub-features not made into rungs.
+
+**Operator decisions.** Which rung is the answer, and whether to ship a lower one; Roadroller
+(-2,168 bytes for 0.9 s desktop and about 4 s throttled start-up); the linear unpacker if the phone
+starts slowly (+100 bytes); naming the two demos in the README credits.
+
+**Documentation drift** in `architecture.md` and `Agents.md` (not mine to edit) is listed in the
+report to the orchestrator.
