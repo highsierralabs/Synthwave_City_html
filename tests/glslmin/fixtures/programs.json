@@ -1,0 +1,12 @@
+{
+  "comment": "GPU corpus for tools/glslmin/browser-test.mjs. Each program is header + src/common.glsl + body. draw: 'tri' is one full-screen triangle; 'inst' is drawArraysInstanced with verts x instances, attribute locations 0 and 1 filled with fixed per-instance vec4s.",
+  "programs": [
+    { "name": "common", "vs": "screen.vert.glsl", "fs": "common.frag.glsl", "draw": "tri" },
+    { "name": "boxes", "vs": "boxes.vert.glsl", "fs": "boxes.frag.glsl", "draw": "inst", "verts": 36, "instances": 64, "depth": true, "cull": true },
+    { "name": "sky", "vs": "screen.vert.glsl", "fs": "sky.frag.glsl", "draw": "tri" },
+    { "name": "beams", "vs": "beams.vert.glsl", "fs": "beams.frag.glsl", "draw": "inst", "verts": 6, "instances": 64, "blend": true },
+    { "name": "dual", "vs": "dual.glsl", "fs": "dual.glsl", "draw": "inst", "verts": 6, "instances": 16 },
+    { "name": "literals", "vs": "screen.vert.glsl", "fs": "literals.frag.glsl", "draw": "tri" },
+    { "name": "tricky", "vs": "screen.vert.glsl", "fs": "tricky.frag.glsl", "draw": "tri" }
+  ]
+}
