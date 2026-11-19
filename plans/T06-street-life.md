@@ -1,7 +1,7 @@
 ---
 id: T06-street-life
 title: Ground traffic and people
-status: ready
+status: done
 depends_on: [T00, T03]
 owns: [src/street/**, plans/T06-street-life.md]
 reads: [architecture.md, Agents.md, src/contracts.ts, src/common.glsl, src/gl.ts, src/engine.ts, src/plan.ts]
@@ -92,10 +92,104 @@ Shots go in `shots/T06/`, scratch in `.tmp/T06/`. Both can be deleted at any tim
 
 ## 8. Progress
 
+- [x] 2026-11-18 Read Agents.md, architecture.md, this plan, contracts, common.glsl, gl.ts, engine
+  exports, dev/probe; looked at the parent's skyline, street, plaza and rooftops screenshots.
+- [x] 2026-11-18 M1 lights: four sprites per car on every lane of every road, from gl_InstanceID
+  only (no buffers). 400 m shots show streams; the eight-frame sequence shows directions.
+- [x] 2026-11-18 M2 bodies: two boxes per car (body and cabin), side stripe, tail and head bars.
+- [x] 2026-11-18 M3 people: 800 additive walkers on the sidewalks of the 5 x 5 cells round the camera.
+- [x] 2026-11-18 M4 seam and fade: frames at t 4095.9 and 0.1 match; far fade by smoothstep.
+- [x] 2026-11-18 M5 optional items: all four built (light pools, motorcycles, buses, brake
+  flicker). Measured 1,236 bytes against 2,200.
+- [x] 2026-11-18 Fixed a density defect found at quality 0 (see Surprises). Acceptance re-run.
+
+Nothing is left. Follow-ups for the art pass are in Outcomes.
+
 ## 9. Surprises and discoveries
+
+- The first lane layout put car slot j at phase j / 64, so a drawn prefix (quality 0 and 1) kept a
+  contiguous 40 or 70 % stretch of every lane: at quality 0 the roads near the camera were empty and
+  all traffic sat far away (shots/T06/q0_x40.png before the fix, since overwritten). Slot j now sits
+  at place (j * 39) mod 64, a permutation that spreads any prefix along the lane; the same shot
+  afterwards shows cars evenly on every road. Lesson: "shuffled, so a prefix is an even sample" has
+  to hold in space, not just in index order.
+- With `--layers backdrop,post` (no street) a sharp-edged yellow area shows on a far avenue
+  (shots/T06/b_only_x40.png, top right). It is not from this layer; noted, not investigated (T04).
+- Bloom comes only with post mounted: `--layers probe,street` shows the lights as small dots; with
+  post they read as a river (shots/T06/high_post.png against high.png).
 
 ## 10. Decision log
 
+- 2026-11-18 No instance buffers at all: car and walker are pure functions of gl_InstanceID and
+  uTime, drawn with drawInst(null, ...). Smallest code; nothing to fill or shuffle.
+- 2026-11-18 Cars in a lane are evenly spaced with one integer speed per lane, instead of random
+  phases and speeds, so cars in a lane never overlap. 384 lane slots (avenue lanes counted twice, so
+  an avenue lane carries twice a street lane) x 64 = 24,576 cars. Started at 48 per lane; 64 made
+  the avenue read as a river from 400 m.
+- 2026-11-18 Shared placement lives in src/street/car.glsl (inside #ifndef FS) and is prepended in
+  TypeScript to the body and light shaders (prog(car + body, ...)). Both are .glsl files, so glslmin
+  renames them with its shared map; no contract change needed.
+- 2026-11-18 Light sprites never shrink below about 2 px radius; their peak falls as sqrt(0.3 / r),
+  so distant lights stay visible as points. Head and tail brightness depends on the angle to the
+  camera (0.3 to 1), so from above both colours show.
+- 2026-11-18 People are additive neon figures (1.2, low L2) rather than dark silhouettes: additive
+  needs no sorting and reads at a distance. The parent shows dark figures with lit accents.
+- 2026-11-18 Lights and people are drawn in the mirror pass (reflect = 1), so the wet road reflects
+  them; bodies are not (vertex cost).
+- 2026-11-18 Buses and motorcycles are a per-car scale (carSize). The slot jitter went from 0.4 to
+  0.3 of a slot so a bus (10.8 m) never overlaps a neighbour (minimum centre gap 12.8 m on avenues).
+
 ## 11. Contract change requests
 
+None.
+
 ## 12. Outcomes and retrospective
+
+**Result against Purpose.** Every road carries moving traffic: 24,576 cars over the tile, an avenue
+lane twice as dense as a street lane, in the right lanes, keeping right, at 8 to 15 m/s on streets
+and 14 to 25 m/s on avenues. Each car is two dark boxes with a coloured side stripe, red tail and
+white head bars, four light sprites and a pool of headlight on the road; 6 % are buses, 6 %
+motorcycles; tails brake at random. 800 people walk the sidewalks near the camera and fade out by
+240 m. From 400 m the avenue reads as a river of white and red points; from street level cars,
+lights, reflections and people are all visible.
+
+**Bytes.** `npm run size -- street`: **1,236 bytes against a budget of 2,200** (file 17,216 at the
+time, gate 32,768). All optional items are in. Possible cuts, not measured one by one (estimates,
+inferred): light pools about 80 to 100 bytes, buses and motorcycles about 60, brake flicker about
+40, people (people.glsl and its draw) about 350 to 400.
+
+**Acceptance evidence** (RTX 4070 SUPER over D3D11, as every run printed):
+
+- Street level in an avenue: shots/T06/all_street2.png, final_walk.png (all layers). Seen: cars
+  ahead in the right lanes with red tails, oncoming cars on the left with white headlights and their
+  reflections, people on both sidewalks, a bus. Bodies read as dark slabs with a stripe.
+- Street intersection from 40 m: all_x40.png, bs_x40.png. Seen: cars in lanes on both roads,
+  crossing cars passing through each other in the box (accepted by the plan), headlight pools.
+- 400 m overview: all_o400.png, final_o400.png, high_post.png. Seen: the avenue as a dense white and
+  red stream to the far fade; streets as sparser dotted lines. What looks off: straight down the
+  avenue, lights between R0 and R1 stand above the already sunk city as a column of soft blobs (the
+  sprite is lifted by its radius so the ground does not cut it).
+- Straight down from 300 m: top300.png (probe), all_top300.png. Seen: cars on all roads, white and
+  red pairs visible from above, denser on avenues.
+- Motion: seq_0..7.png (0.25 s apart, 25 m over the avenue at x = 2048, looking -z): cars right of
+  the centre line show tails and move up the frame (away, -z); cars left show headlights and move
+  down; about 20 m in 1.75 s for the near ones, inside 8 to 25 m/s.
+- On the carriageway: in seq_*, seam_* and near40.png (probe ground) every car sits between the curb
+  lines, three lanes per side on the avenue; people sit between curb and building line.
+- Loop seam: seam_a.png (t 4095.9) and seam_b.png (t 0.1), top-down over the avenue: the same cars,
+  each a few metres further along its lane; image mean 70.7/255 in both.
+- Far fade: far_avenue.png and farseq_0..2.png (camera moving 40 m per frame): the far band of
+  lights dims into the haze and holds its place between frames; no pop seen in three stills (stills
+  cannot prove it).
+- Quality 0: q0_x40.png after the fix: cars evenly spread on every road.
+- No console errors and no shader warnings in any shot.mjs output of this session.
+- `npm run check:task -- T06`: PASS (typecheck 0 errors, import rules 0, plan 0).
+
+**Not verified.** Frame time: nine agents share this GPU and CPU, so none was measured. At quality 2
+the layer draws 49,152 boxes (1.77 M vertices) and 123k sprites; the vertex cost on a phone is
+unknown. No packed-build check (verify, smoke) was run by this task. Shimmer of sprites in motion
+was not judged beyond short sequences. Phone, Firefox and Safari not tested.
+
+**For the art pass.** Lights between R0 and R1 straight down an avenue (fade them earlier?); people
+are bright figures where the parent's are dark with lit accents; pool brightness 0.3; avenue
+density (64 per lane); headlight intensity 8 and the sqrt falloff.
