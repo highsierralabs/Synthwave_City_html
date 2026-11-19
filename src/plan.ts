@@ -82,7 +82,7 @@ export function buildPlan(seed: number): void {
   }
 
   // Districts by quantile of the field, plus plazas that never touch.
-  const q = f.slice().sort(), lo = q[410]!, hi = q[820]!;
+  const q = f.slice().sort(), lo = q[307]!, hi = q[717]!;
   for (let c = 0; c < f.length; c++) {
     const i = c % CELLS, j = c / CELLS | 0;
     if (cells[c * 4] == D_MEGA) continue;

@@ -1,7 +1,7 @@
 ---
 id: T13-art-pass
 title: Balance the picture
-status: in-progress
+status: done
 depends_on: [T00, T01, T02, T03, T04, T05, T06, T07, T08, T09, T10, T11, T12]
 owns: [docs/screenshots/**, plans/T13-art-pass.md]
 reads: [architecture.md, Agents.md, src/**, plans/**]
@@ -227,7 +227,7 @@ Every change is a number in a tracked file; `git diff` shows them all and `git c
   7. Draw calls: the harness reports 34 per frame against the 30 of section 11.3 (not a picture
      fault; noted for T14).
 
-- [x] 2026-11-18 M2 light balance, first pass: c01 to c14 below (seven kept, seven tried and
+- [x] 2026-11-18 M2 light balance, first pass: c01 to c14 below (nine kept, five tried and
   reverted). Air traffic, near facades and the wet road are better; the mid-distance wash and the
   sun stripes are not (see Surprises). The tour changes c10 to c12 belong to M4 but were made here
   because the survey's tour was where the facade problem showed. `npm run check` OK (109 tests),
@@ -253,6 +253,21 @@ Every change is a number in a tracked file; `git diff` shows them all and `git c
   8.0, p95 8.1, p99 8.1, worst 8.2; no frame over 50 ms. Headless Chromium here ticks rAF every 8 ms,
   so this shows only that no frame missed that clock at either size; it is not a GPU time and says
   nothing about a phone.
+
+- [x] 2026-11-18 Skyline depth, second pass: c18 (district mix, kept) and c19 (tour altitude,
+  reverted). Final survey of all thirteen views at q2 in moods 0, 1, 2 and at q0
+  (`shots/T13/final-*`), side by side with M1 (`sheet-final-street.png`, `sheet-final-away300.png`,
+  `sheet-final-mega.png`, `sheet-final-moods.png`). Those final pictures were taken just before c18;
+  c18's own before and after is `sheet-c18.png`.
+- [x] 2026-11-18 M6 README pictures in `docs/screenshots/`, 1280x720 like the parent's, shot with
+  `shot.mjs` from the final tree at t = 20: `skyline.png` (the megatower at 3652, 3904 from 776 m,
+  cam 3652,220,4680,0,0.08), `street.png` (2051.5,1.7,2300,0,0.04), `plaza.png`
+  (2112,6,2445,0,0.25), `rooftops.png` (1550,160,1300,-0.3,-0.05), `midnight.png` (mood 1,
+  2048,260,2700,0,-0.12). 1.5 to 1.8 MB each, about the parent's sizes.
+- [x] 2026-11-18 Acceptance on the final tree: `npm run check` OK (typecheck, 109 tests, import
+  rules, plans:check); `npm run check:task -- T13` PASS; `npm run verify` OK (4 views, 0 differing
+  pixels of 518,400 each); `npm run smoke` OK at 1920x1080 (10 s, 1,273 frames, p95 8.1 ms, worst
+  8.2) and at 2560x1440 (10 s, 1,270 frames, p95 8.1, worst 8.1); file 17,538 bytes. Committed.
 
 ### Change log
 
@@ -282,6 +297,8 @@ c13's before and after are `shots/T13/c11*` and `c12*`; c14's are `c12` to `c16`
 | c15 | `src/backdrop/ground.glsl` (far reflection) | far `wet` average `0.1` | `0.05` | From 1500 m a second, dim sun shows in the fogged plain below the ridge: the mirror pass's sky in the far wet average. Halving it only dimmed the ghost a little (`shots/T13/m3/h1500flat-q2*.png`) and dulled the far avenues at 300 m (`sheet-c15m3.png`). Reverted; left as an observation. | n/a |
 | c16 | `src/lights/beam.glsl`, `src/lights/holo.glsl` (beat pulse) | `(0.8 + 0.4 * uTime.w)` | `(0.6 + 0.8 * uTime.w)` | The city's pulse was the beams and billboards moving by +/-20%, which a sequence across one beat (`shots/T13/beat0`, frame mean 81.9 to 81.0) barely showed. At 0.6 to 1.4 the beams visibly flare on the beat and settle (`beat1`, `sheet-beat1.png`); the decay shape is unchanged, so it reads as a pulse, not a strobe. Kept. | 17,530 |
 | c17 | `src/buildings/index.ts` (drawn prefix) | `boxCount * density` | `boxCount * (density * .6 + .4)` | At quality 0 (density 0.4) many blocks were empty lots and the 600 m and avenue views were mostly ground (`shots/T13/m5/*-915x412.png`). Buildings now draw 64% at q0, 82% at q1, 100% at q2; streets, air and lights keep the shared density. The q0 views fill in (`sheet-c16.png` in `shots/T13/m5/`). Costs vertex work on a phone that nobody has measured. Kept; a judgement call. | 17,538 |
+| c18 | `src/plan.ts` (district mix) | `lo = q[410]`, `hi = q[820]`: 40% low, 40% mid, 20% high | `lo = q[307]`, `hi = q[717]`: 30% low, 40% mid, 30% high | Skyline depth (orchestrator item 2). Measured for seed 1984: districts low/mid/high/plaza/mega 391/396/192/38/7 to 292/394/293/38/7, boxes 3,904 to 3,764 (high cells hold one tower, not two to four lots). From 300 m the skyline now has clusters of towers instead of a carpet of blocks (sun300, away300, edge in `sheet-c18.png`). Tour: time below the roofs on both sides 33.2% to 38.8%, altitude mix unchanged; the first two minutes spend more frames in tower canyons (`tour4`). `tests/plan` and `tests/camera` pass (30 tests). Kept; a judgement call. | 17,538 |
+| c19 | `src/camera/tour.ts` (altitude targets) | `30 + (h - .15) * 243` (30 to 200 m) | `40 + (h - .15) * 300` (40 to 250 m) | To offset c18's canyons. Canyon time 38.8% to 35.4%, 200-300 m 16.4% to 22.2%; the two-minute sequence (`tour5`) did not look better than `tour4`, and one frame came very close to a dark wall. Reverted. | n/a |
 
 ## 9. Surprises and discoveries
 
@@ -291,8 +308,90 @@ c13's before and after are `shots/T13/c11*` and `c12*`; c14's are `c12` to `c16`
   its pink. Darkening the fog (c05) changed little; brightening the average (c03) made it greyer,
   because the two window colours of a building are often opposite hues.
 
+- 2026-11-18. The beat pulse on the default clock was hard to see: the frame mean moved 1.1% across
+  a beat (`shots/T13/beat0`). Only the beams, the billboards and one building in ten follow the beat.
+- 2026-11-18. From 1500 m a dim second sun shows in the fogged plain below the ridge: the mirror
+  pass's sky in the ground's far wet average (`shots/T13/m3/h1500flat-q2.png`). Only free flight
+  goes that high. Halving the far average barely dimmed it (c15).
+- 2026-11-18. The harness reports 34 draw calls per frame at q2 against the 30 of section 11.3, and
+  23 at q0. Not a picture problem; for T14 to weigh.
+- 2026-11-18. c18 changes numbers that `architecture.md` section 5.5 quotes as measured for the
+  shipped seed (391 low, 396 mid, 192 high, 3,904 boxes). They are now 292, 394, 293 and 3,764.
+  T13 does not own `architecture.md`; reported for the orchestrator to correct.
+
 ## 10. Decision log
+
+| Date | Decision | Why |
+|---|---|---|
+| 2026-11-18 | Treat numbers inside `src/common.glsl` function bodies (the fog colours, c05) as tunable; leave alone the constants it mirrors from `contracts.ts`, and `contracts.ts` itself. | Section 14 gives T13 a window to retune numbers anywhere; the frozen part is the interface (names, signatures, the constants held equal by `tests/contracts`). The fade radii and quality densities live in `contracts.ts`, so they were not touched even where they would have helped (q0, M3). |
+| 2026-11-18 | Revert every change whose effect could not be seen in a side-by-side picture (c03, c04, c06, c13, c14, c15, c19), even where the arithmetic said it should matter. | The task's rule. Three of them (c13, c14, c15) also showed that the arithmetic was wrong about what dominates the picture. |
+| 2026-11-18 | c17 spends phone vertex work on buildings rather than leaving q0 sparse. | Empty lots read as a broken city; buildings are 3,764 boxes, far fewer instances than the street and air layers, which keep the shared density. Unmeasured on a phone. |
+| 2026-11-18 | c18 moves the district mix towards towers, accepting more canyon time on the tour. | The skyline is the parent's signature picture and the orchestrator's second item; the tour's canyon frames look like the parent's `rooftops.png`. |
+| 2026-11-18 | README pictures at 1280x720, named like the parent's, plus `midnight.png`. | Same size and names as the parent's `docs/screenshots`, so T14's README can follow the parent's. |
 
 ## 11. Contract change requests
 
+None filed. One for the orchestrator or T14 to consider, not needed by this task: the q0 far fade
+(`Q_R0_0`, `Q_R1_0` = 900 and 1300 m) and density (`Q_DENSITY0` = 0.4) in `src/contracts.ts` are
+what make q0 look empty past 900 m; c17 works round the density for buildings only. Raising them is
+a phone-performance question nobody has measured.
+
 ## 12. Outcomes and retrospective
+
+**Result against Purpose.** Of nineteen tries, twelve are kept (c01, c02, c05, c07 to c12, c16 to
+c18) and seven reverted. Observed in the pictures named in the change log:
+
+- Air traffic reads as streams of craft with short tails, one colour per lane, instead of long
+  multicoloured streaks across the sky (c01, c02). The sky is still busy, as the parent's is.
+- Near facades read as buildings with framed windows rather than walls of coloured tiles (c07).
+- The road is wet, not glass (c08, c09).
+- The tour stays on avenues, looks less steeply down at altitude, and banks less (c10 to c12).
+- The skyline from 200 to 300 m has towers in it (c18). The README skyline picture, a megatower
+  among towers with beams and the sun, is close to the parent's `skyline.png`.
+- The beat shows on the beams and billboards (c16). Quality 0 is less sparse (c17).
+
+**Still wrong, worst first (observed):**
+
+1. Mid-distance facades (400 m and beyond) still fade to a mauve-grey, wireframe look: their windows
+   average to a dim, desaturated colour and the gamma lifts it. Three number changes did not fix it
+   (c03, c04, c06). The lever T05 named, a block-level lit pattern that survives past window size,
+   is new code, not a number.
+2. The tour now spends more time in tall canyons (38.8% of an hour below the roofs on both sides); a
+   viewer may find it wall-heavy. c19 did not help.
+3. At q0 the city ends at 900 to 1300 m and the plain beyond is empty; from altitude it shows. The
+   fix is in contract numbers (section 11).
+4. Sun stripes are thin near the top of the visible disc and their gaps glow; four tries changed
+   nothing visible (c14).
+5. A ghost sun in the far plain from 1500 m, free flight only (c15).
+
+**Bytes.** 17,522 before, 17,538 after: +16 bytes against the allowance of about 500. `npm run size`
+on the final tree, marginal bytes: core 3,824, container 518, plan 1,244, backdrop 1,508, buildings
+1,012, street 1,228, air 850, lights 2,046, post 602, audio 1,604, camera 2,134, main 1,588.
+
+**Frame time.** `npm run smoke` on the packed file with the tour driving, this desktop idle, headless
+Chromium 151 on the RTX 4070 SUPER (ANGLE D3D11), quality 2: at 1920x1080 and at 2560x1440, 10 s
+each, median 8.0 ms, p95 8.1, worst 8.2, no frame over 50 ms. Headless Chromium here ticks rAF
+every 8 ms, so this shows only that no frame missed that clock at either size. It is not a GPU
+time and says nothing about a phone.
+
+**Not verified.**
+
+- Anything on a phone or tablet: c17's vertex cost at q0, legibility at real phone pixel densities,
+  touch. The phone-sized pictures are desktop renders at 915x412 and 412x915, device scale 1.
+- Motion as a viewer sees it. Judged from frame sequences (1 s apart for the tour, 1/30 s for
+  traffic and flight); no video, no display with vsync.
+- The beat pulse with audio running: only the engine's default clock pulse was looked at; nothing
+  was listened to.
+- Moods 1 and 2 were surveyed but tuned only through c05's shared fog numbers.
+- Firefox and Safari: nothing here runs them.
+
+**Judgement calls the operator may want to reverse**, each a one-line revert of the number in the
+change log: c18 (district mix: `q[307]`, `q[717]` back to `q[410]`, `q[820]`), c10 (avenues 98% of
+the time: `* 3` back to `* 2`), c17 (more buildings at q0: `(density * .6 + .4)` back to `density`),
+c16 (beat pulse: `0.6 + 0.8` back to `0.8 + 0.4`), c05 (fog numbers inside `common.glsl`), c02 (one
+colour per lane).
+
+**What the operator should look at:** the tour for a few minutes at q2 on a monitor (canyon time
+after c18; whether the beat pulse feels like a pulse or a flash with music on); the file on the
+Android phone at q0 (sparse or full, smooth or not, after c17); the five pictures in
+`docs/screenshots/` as README material.
