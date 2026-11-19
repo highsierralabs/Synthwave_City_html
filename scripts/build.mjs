@@ -24,7 +24,7 @@ const fmt = (n) => n.toLocaleString('en-US');
 /** Runs the whole pipeline on `entry`. Returns the outputs; writes nothing.
  *  `sets`: terser option set names to try (all by default). `level`: pack level. */
 export async function buildFile({ entry = join(ROOT, 'src', 'main.ts'), rename = true, withDev = false, sabotage = false, sets, level = 'max', safe = true } = {}) {
-  const js = await bundle({ entry, dev: false, glsl: { rename, withDev, sabotage } });
+  const js = await bundle({ entry, dev: false, glsl: { rename, withDev, sabotage }, flat: true });
   const { pack, quickSize } = await freshImport('tools/pack/index.mjs');
   const candidates = (await minifyJs(js, sets)).map((c) => ({ ...c, quick: quickSize(c.code) }));
   candidates.sort((a, b) => a.quick - b.quick || (a.name < b.name ? -1 : 1));

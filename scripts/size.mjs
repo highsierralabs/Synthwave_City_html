@@ -51,7 +51,7 @@ export function stubFor(m, source) {
 async function quick(stubbed) {
   const stubs = new Map();
   for (const m of stubbed) stubs.set(pathOf(m), stubFor(m, readFileSync(pathOf(m), 'utf8')));
-  const js = await bundle({ entry: pathOf('main'), dev: false, glsl: { rename: true }, stubs });
+  const js = await bundle({ entry: pathOf('main'), dev: false, glsl: { rename: true }, stubs, flat: true });
   const [{ code }] = await minifyJs(js, [SET]);
   const { quickSize } = await freshImport('tools/pack/index.mjs');
   return quickSize(code);

@@ -94,12 +94,14 @@ function stubPlugin(stubs) {
 }
 
 /** esbuild options for one bundle. `glsl` null keeps shaders as written; an object minifies them
- *  all together ({ rename, withDev, sabotage }). `stubs` replaces modules (Map path -> text). */
-export function bundleOptions({ entry, dev = true, glsl = null, outfile, stubs } = {}) {
+ *  all together ({ rename, withDev, sabotage }). `stubs` replaces modules (Map path -> text).
+ *  `flat`: no IIFE and no "use strict" around the program, for the packed file, whose unpacker
+ *  evaluates the text with an indirect eval (global scope, sloppy mode). Saved 24 bytes (T14). */
+export function bundleOptions({ entry, dev = true, glsl = null, outfile, stubs, flat = false } = {}) {
   return {
     entryPoints: [entry],
     bundle: true,
-    format: 'iife',
+    format: flat ? 'esm' : 'iife',
     target: 'es2022',
     platform: 'browser',
     charset: 'utf8',
