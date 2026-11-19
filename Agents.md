@@ -27,7 +27,8 @@ npm run size                   # build, then the marginal cost of every module a
 npm run size -- street         # the same for one module
 npm run verify                 # the packed build draws the same pixels as the unminified sources
 npm run smoke                  # the packed file boots from file://, no errors, frame-time budget
-npm run typecheck              # tsc --noEmit
+npm run typecheck              # tsc --noEmit on both projects (tsconfig.json: the product; tsconfig.tests.json: tests)
+npm run probe                  # the GL assumptions, proven on the GPU: instancing, block F, float targets, common.glsl
 npm test                       # vitest run
 npm run check                  # typecheck + tests + import boundaries + plans:check, whole repo
 npm run check:task -- T05      # the same gates, reported only for the paths that plan owns
@@ -41,9 +42,12 @@ npx vitest run tests/plan/plan.test.ts -t "deterministic"
 `shot.mjs` is self-contained: it bundles the harness with the layers you name into `.tmp/`, opens it
 from disk in Chromium on the GPU, prints the WebGL renderer string, console errors, shader logs and
 image statistics, and writes a PNG. It needs no server, so any number of agents can run it at once.
-Run it with no arguments for every flag: `--layers` (comma list or `all`), `--cam x,y,z,yaw,pitch`,
-`--view <name>`, `--t seconds` (freezes time), `--q 0|1|2`, `--mood n`, `--post 0`, `--size WxH`,
-`--frames N --dt s` for a sequence, `--tour 1` to let `src/camera` drive.
+Run it with no arguments for every flag: `--layers` (comma list or `all`; `probe` is T00's example
+layer), `--cam x,y,z,yaw,pitch`, `--view street|high|far|top|edge`, `--t seconds` (freezes time),
+`--q 0|1|2`, `--mood n`, `--post 0`, `--size WxH`, `--frames N --dt s --move dx,dy,dz` for a sequence,
+`--tour 1` to let `src/camera` drive, `--app 1` to shoot the unminified `src/main.ts` instead of the
+harness. `verify` takes `--sabotage` (it must then fail) and `--no-rename`; `smoke` takes `--file`,
+`--no-build`, `--budget` and `--size`.
 
 ### Source of truth, highest first
 
@@ -121,6 +125,8 @@ shape of the program, so that is where to spend the effort:
 - **No defensive code** beyond what §12 lists. No argument checks, no fallbacks for browsers outside
   §1.4, no messages other than the ones §12 names.
 - **Types are free.** Annotate everything; cast nothing. `import type` for type-only imports.
+- **Never compare a boolean with `=== true` or `=== false`,** and never rely on `typeof x ===
+  'boolean'`. The winning terser set turns `true` into `1` [O: T00].
 - **`DEV`** is a build-time boolean. `if (DEV) { ... }` vanishes from the shipped file. Use it for
   logs, assertions and harness hooks.
 - Target is ES2022 with no down-levelling, so nothing needs a helper. Use what the language has.
@@ -131,8 +137,16 @@ all of them, strips comments and space, and shortens numbers. So:
 - Write clear names and comments; they cost nothing.
 - Reserved names it will not touch: `F`, `T0`–`T7`, `X0`–`X3`, `FS`, `main` (§10.6). Use them only for
   what §10.6 says.
-- Anything that looks like a declaration is renamed. Do not rely on a name's spelling: no token
-  pasting, no name built inside a macro.
+- Anything that looks like a declaration is renamed [O: T02]. Not renamed: names after a `.`, struct
+  field declarations, interface block names, and members of a block that has an instance name. Do
+  not rely on a name's spelling: no token pasting, no name built inside a macro.
+- **A uniform or sampler JavaScript looks up must have a reserved name.** Any other name is renamed
+  and `getUniformLocation` will not find it in the packed build.
+- Do not hide a type behind a macro (`#define V vec3`, then `V p;`): the declaration is not seen and
+  not renamed. Do not give your own things the names of built-ins; such names are never renamed.
+- Top-level functions and `const` globals that no shader refers to are dropped from the packed
+  build, so an unused helper in `common.glsl` costs nothing. That only works because every shader
+  goes through one minify call: all GLSL lives in `.glsl` files, never in TypeScript strings.
 - A helper used by two shaders belongs in `common.glsl`; ask for it with a contract change request.
   Two private copies cost twice.
 - A literal used once is cheaper than a named `const`. A value used in many shaders belongs in
@@ -148,7 +162,11 @@ all of them, strips comments and space, and shortens numbers. So:
   which is erased. Do not write `?? 0`, which ships a branch and hides out-of-range bugs [SC].
 - Imports name the file with its extension as the stubs do (`'../contracts'` style is set by T00 in
   `tsconfig.json`; copy what the stub in your folder uses).
-- `.glsl` files import as strings: `import vs from './car.vert.glsl'`. `src/glsl.d.ts` declares them.
+- `.glsl` files import as strings. The idiom is **one file per program, serving both stages**:
+  `import car from './car.glsl'` and `prog(car, car)`, with the fragment code inside `#ifdef FS` and
+  the vertex code in its `#else` (`dev/probe/` is the example). `src/glsl.d.ts` declares them.
+- Destructuring a `number[]` gives `number | undefined` under `noUncheckedIndexedAccess`. Declare a
+  tuple type instead of casting [O: T03].
 - Never route round a contract with `any` or a cast. File a contract change request (see Plan files).
 
 ## Raw WebGL2
@@ -160,8 +178,9 @@ one way of doing a thing is smaller than two.
 
 - Every shader is `header + common.glsl + your text`. The header is `#version 300 es`, the precision
   lines and, for fragment shaders, `#define FS`. Do not write your own `#version` or `precision`.
-- The helper binds block `F` to binding point 0 and sets samplers `T0`–`T7` to units 0–7 at link time.
-  A program never looks up a uniform by name at draw time.
+- Block `F` needs no binding call: every uniform block starts at binding point 0, where the engine
+  keeps `F` [O: probe]. The helper sets samplers `T1`–`T7` to units 1–7 at link time; `T0` is unit 0
+  by default. A program never looks up a uniform by name at draw time.
 - Compile everything in `init`, before the first frame. Compile and link status are checked once,
   there; a failure goes to `console.error` and `window.__E` and the layer draws nothing.
 - Never call `gl.getError`, `readPixels` or `finish` in a frame; each one stalls the pipeline [M].
@@ -172,8 +191,8 @@ one way of doing a thing is smaller than two.
   buffer holds positions.
 - One vertex array per kind of thing, holding only per-instance attributes with divisor 1, at
   `layout(location = n)`. One instanced draw call for all of them.
-- Drawing with every enabled attribute instanced, and none per vertex, is legal in WebGL2 [M: it was
-  an error only under the WebGL1 instancing extension]. T00 proves it with the probe layer.
+- Drawing with every enabled attribute instanced and none per vertex works, and so does a draw with
+  no attributes at all, from `gl_VertexID` and `gl_InstanceID` [O: probe].
 - Fill instance buffers once in `init` with `STATIC_DRAW`. Shuffle them, and draw
   `count * density` instances, so a lower quality draws an even sample (§11.1).
 - Per-frame CPU animation is the exception. If you need it, update one small buffer with
@@ -185,7 +204,10 @@ one way of doing a thing is smaller than two.
   half-float target. Layers never bind a framebuffer; `post` does, through `target()`.
 - Rendering to `RGBA16F` needs `EXT_color_buffer_float` or `EXT_color_buffer_half_float`
   [W: mdn-cbf]. The helper asks for both and falls back to `RGBA8`. Linear filtering of half-float
-  textures is core in WebGL2 [M].
+  textures works without an extension [O: probe]. `tex()` takes bytes, not a canvas: pass
+  `ctx.getImageData(0, 0, w, h).data`.
+- GL enums are written as numbers with the name in a comment (`gl.depthFunc(515); // LEQUAL`): a
+  `gl.FOO` property ships its name, a number does not. Follow `src/gl.ts`.
 - Set blend and depth state through `state(mode)` at the top of every `draw`. Never assume what the
   previous layer left.
 - The mirror pass flips winding; the engine sets `frontFace`. Do not touch it.
@@ -206,11 +228,15 @@ In a `draw` or an update: no `new`, no closures, no array literals, no spread, `
 - **Move along lanes with `fract(laps * uTime.y + phase)`, `laps` an integer** (§5.3). Use `uTime.x`
   only for cosmetic flicker.
 - **Write light on the shared scale** (§6.2). Unlit surfaces stay under 0.15, large lit areas under
-  1.0, neon 1.5 to 4, small cores up to 10. Run every colour through `fog()` before output.
+  1.0, neon 1.5 to 4, small cores up to 10. Run every opaque colour through `fog()` before output.
+  **Additive colour is scaled by `1.0 - fogAmount(p)` instead:** `fog()` would add the fog colour a
+  second time [O: T00].
 - **Filter anything periodic.** Take `fwidth` of the coordinate before `fract`, and fade a pattern to
   its average once a cell is smaller than about two pixels. Use the filtered-line helpers in
   `common.glsl` for thin lines; a raw `step` shimmers at distance [SC]. There is no MSAA here, so this
   is the only antialiasing the city gets.
+- `road(c).x` jumps by `CELL` in the middle of each block. `fwidth` is meaningless across that jump,
+  so mask `line()` there, as `dev/probe/ground.glsl` does [O: T00].
 - Take derivatives before any branch that depends on per-pixel data, and do not `return` or `discard`
   under a non-uniform condition above derivative-dependent code. On D3D11 that drew outlines around
   cells [SC].
@@ -231,7 +257,9 @@ In a `draw` or an update: no `new`, no closures, no array literals, no spread, `
   `#ifdef FS`. Vertex-only code (`gl_VertexID`, `gl_InstanceID`) goes outside it or in `#ifndef FS`.
 - Additive ribbons face the camera and are drawn with culling off (`state` has a mode for it); with
   culling on, about half vanish [SC].
-- Translator warnings go to `console.warn`, not `console.error` [SC]. `shot.mjs` prints both.
+- ANGLE's performance warnings appear in the shader info log, and WebGL `INVALID_OPERATION`
+  messages go to `console.warn` [O: T00]. `shot.mjs` prints both. Dynamic indexing of a vector
+  (`p[i]` with a variable `i`) draws one such warning in every program; use swizzles.
 
 ## Web Audio
 
@@ -261,7 +289,7 @@ In a `draw` or an update: no `new`, no closures, no array literals, no spread, `
 - Tools are pure functions with a thin command line on top, so Vitest can call them directly.
 - Deflate output must be **raw** (`deflateRawSync`, or zopfli with the raw format).
   `DecompressionStream('deflate-raw')` rejects a zlib header, and rejects trailing bytes after the
-  final block [M]; T01 proves both.
+  final block, zero bytes included, so padding goes in front of the stream [O: T01].
 - A build must be reproducible: the same sources give the same bytes. No timestamps, no random names.
 
 ## Vitest 5
@@ -270,6 +298,8 @@ In a `draw` or an update: no `new`, no closures, no array literals, no spread, `
   the browser with `shot.mjs`, `verify` or `smoke`.
 - A module that imports `.glsl` cannot be imported in a unit test. Keep testable logic in files that
   do not.
+- `tsconfig.json` has no Node types, so the product cannot use a Node global by accident. Tests are
+  checked by `tsconfig.tests.json`, which has them.
 - `plan.ts` must be deterministic: same seed, same bytes. Test that, and test invariants (no box inside
   a road corridor) rather than golden numbers the art pass will move [SC].
 - Use `vitest run`; bare `vitest` can sit in watch mode [SC].
@@ -281,6 +311,8 @@ In a `draw` or an update: no `new`, no closures, no array literals, no spread, `
 - The cached Chromium is revision 1234 (version 151), older than this Playwright expects, so the
   scripts pass an explicit `executablePath` found by `scripts/lib/browser.mjs` [SC, O].
 - Pages are opened from `file://`, as a user would open the product. That works [O].
+- Headless Chromium here ticks `requestAnimationFrame` every 8.0 ms [O: T00]. `smoke` holds the 95th
+  percentile of frame intervals under 18 ms by default.
 - GPU flags: `--ignore-gpu-blocklist --use-angle=d3d11`. `--disable-gpu` gives SwiftShader, not "no
   WebGL"; `--disable-3d-apis` gives no WebGL [SC]. The scripts print the renderer string; check it
   says NVIDIA and not SwiftShader before believing a frame time.

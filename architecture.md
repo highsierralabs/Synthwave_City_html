@@ -125,13 +125,13 @@ those can grow the file.
 An estimate before anything is built [I]; §11.2 has the per-task budgets that add up to it.
 
 ```
-unpacker and container overhead      ~1.3 kB
+unpacker and container overhead      ~0.6 kB     measured [O]
 runtime core (GL helper, engine)     ~2.6 kB
 city, layers, post                  ~15.0 kB     about half of it GLSL
 audio                                ~3.4 kB
 camera, input, app shell             ~3.8 kB
                                     --------
-                                    ~26 kB       gate: 32,768     ceiling: 65,536
+                                    ~25 kB       gate: 32,768     ceiling: 65,536
 ```
 
 For scale: the two single-file demos that prompted this are 127,617 and 99,514 bytes, not packed
@@ -152,7 +152,7 @@ For scale: the two single-file demos that prompted this are 127,617 and 99,514 b
 5. **A shared uniform block.** One `std140` block `F`, mirrored by one `Float32Array`. Shared state
    crosses from JavaScript to GLSL by slot number, so no uniform name is ever looked up by string.
 6. **Shader minifying with one name map** for all shaders (`tools/glslmin`).
-7. **Deflate with zopfli**, then a container with about 3% overhead (§3.3).
+7. **Deflate with zopfli**, then a container that adds about 0.3% and a 510-byte unpacker (§3.3).
 8. **Cutting features**, last, in the order their cost per unit of experience says (§3.5).
 
 ### 3.3 The container
@@ -164,27 +164,41 @@ Chromium 151 from disk, over HTTP, and over HTTP with `Content-Type: text/html; 
 
 | Container | Overhead | From disk | HTTP | HTTP, `charset=utf-8` |
 |---|---|---|---|---|
-| `utf16`: UTF-16LE with a byte order mark, payload as 16-bit code units in a string literal | 3.6% (3.1% + 510 bytes) | runs | runs | runs |
+| `utf16`: UTF-16LE with a byte order mark, payload as 16-bit code units in a string literal, damaged units escaped | 3.6% (3.1% + 510 bytes) | runs | runs | runs |
 | `latin1`: `windows-1252`, payload after `<plaintext>` | 1.6% | runs | runs | **fails** |
 | `ascii`: base64 `data:` URL | 33.5% | runs | runs | runs |
 
 **`utf16` is the shipped container.** The byte order mark `FF FE` makes the browser decode the file as
 UTF-16LE whatever the server or a `<meta>` says: "the byte-order mark overrides any encoding
-declaration in the HTTP header" [W: w3c-bom]. Each pair of payload bytes is one code unit. The 3% of
-units the parser or a string literal would damage (NUL, CR, LF, `"`, `\`, `<`, the surrogates
-`D800`–`DFFF`, a few others) are written as an escape unit followed by the unit XOR `0x1000`. The
-unpacker undoes that, inflates, and evaluates the result:
+declaration in the HTTP header" [W: w3c-bom].
+
+The spike escaped the damaged units. T01 then found something better and that is what ships: the
+whole deflate stream is written as **one big number in base 63,358**, one code unit per digit, using
+only the units no parser or string literal can damage (`0080`–`D7FF` and `E000`–`FFFD`: nothing in
+the ASCII range, no surrogate). No escapes, and the loss is 0.31% instead of 3.1%. The unpacker
+rebuilds the number with `BigInt`, cuts it into 64-bit words, inflates, and evaluates the result:
 
 ```
-<body><script>s="…";b=new Uint8Array(N);for(i=j=0;j<N;)c=s.charCodeAt(i++),
-c==4352&&(c=s.charCodeAt(i++)^4096),b[j++]=c,b[j++]=c>>8;new Response(new Blob([b]).stream()
+<body><script>s="…";n=0n;for(c of s)n=n*63358n+BigInt((c=c.charCodeAt())>55295?c-2176:c-128);
+for(b=[];n;n>>=64n)b.push(n);new Response(new Response(new BigUint64Array(b)).body
 .pipeThrough(new DecompressionStream("deflate-raw"))).text().then(eval)</script>
 ```
 
-Not yet shown: Firefox, Safari and a real phone [I]. The packer keeps `ascii` as a second output
-(`dist/synthwave-city.safe.html`) for anywhere `utf16` turns out not to work, and T01 tests what this
-machine can reach. The page title, viewport `<meta>` and CSS are created by the payload, so they are
-compressed too.
+Measured [O: T01]: the wrapper is a constant 510 bytes, plus 0 to 14 bytes of padding, plus 0.31% of
+the stream: **+582 bytes at a 22,396-byte stream**, +815 at 98,734. It runs in Playwright Chromium
+151, Chrome 157, Edge 157 and Brave 158, from `file://` and over HTTP with no charset, with
+`charset=utf-8` and with `charset=iso-8859-1`. Those are one engine family. Two limits were found:
+
+- A server that sends **no `Content-Type` at all** makes Chromium show the file as text. Any
+  `text/html` header works.
+- Rebuilding the number is quadratic in its length: 55 to 110 ms on this desktop at a 25 to 35 kB
+  stream, 315 ms at 60 kB. A phone is several times slower and has not been measured. A block
+  variant that decodes in linear time costs about 108 bytes more and is T14's to weigh.
+
+Not yet shown: Firefox, Safari and a real phone [I]. The packer writes `ascii` as a second output
+(`dist/synthwave-city.safe.html`) for anywhere `utf16` turns out not to work. The page title,
+viewport `<meta>` and CSS are created by the payload, so they are compressed too. The file has no
+doctype, so the page is in quirks mode.
 
 A consequence to know: the shipped file is not text. Editors show noise, and it must travel as a file
 (download, attachment), not as pasted text.
@@ -400,8 +414,9 @@ beacons, searchlights and billboards pick their spots by scanning `boxes` and `m
 
 Skyline: a low-frequency height field with a few downtown peaks sets each cell's district. Typical
 roof heights are 12 to 50 m in `low`, 50 to 160 m in `mid`, 150 to 400 m in `high`, and 500 to 800 m
-for the handful of megatowers, which reach about 950 m with spire. Expected sizes [I]: 1,024 cells,
-about 2,500 buildings and 5,000 boxes.
+for the megatowers, which reach up to about 930 m with spire. Measured for the shipped seed [O: T03]:
+1,024 cells (391 low, 396 mid, 192 high, 38 plaza, 7 mega), 3,904 boxes, and seven megatowers of 591
+to 868 m.
 
 ## 6. Look
 
@@ -562,8 +577,8 @@ positive yaw turns left; positive pitch looks up.
 | Module | Exports |
 |---|---|
 | `contracts.ts` | the constants, `F`, `P` |
-| `gl.ts` | `gl`; `glInit(canvas)`; `prog(vs, fs)`; `buf(data)`; `inst(buffer, sizes)` making a vertex array of per-instance attributes; `tex(...)`; `target(...)`; `state(mode)` for blend and depth; `tri()`, the full-screen triangle |
-| `engine.ts` | `boot(canvas)` returning false without WebGL2; `addLayer`; `addUpdate`; `onResize`; `setPost`; `run()`; `frame(seconds)` for the harness; `setQuality(q)`; `setMood(m)`; `sceneW`, `sceneH` |
+| `gl.ts` | `gl`; `glInit(canvas)`; `floatTargets`; `prog(vs, fs)`; `buf(data, usage?)`; `inst(buffer, sizes)` making a vertex array of per-instance attributes; `drawInst(vao, verts, count)`; `tri()`, the full-screen triangle; `tex(w, h, bytes, float?, reuse?)`; `target(w, h, depth?, old?)` and the `Target` type; `bindTarget(t)`; `bindTex(unit, t)`; `state(mode)` with the modes `OPAQUE`, `TWO_SIDED`, `ADD`, `SKY`, `FULL` |
+| `engine.ts` | `boot(canvas)` returning false without WebGL2; `addLayer`; `addUpdate`; `onResize`; `setPost`; `run()`; `frame(seconds)` for the harness; `setQuality(q)`; `setMood(m, snap?)`; read-only `sceneW`, `sceneH`, `time`, `quality`, `scale` |
 | `plan.ts` | `buildPlan(seed)`; `boxes`; `boxCount`; `cells`; `megas`; `megaCount`; `heightAt(x, z)` |
 | each layer, `post` | `init()` |
 | `audio` | `audioStart()` (call inside a gesture); `audioMute()` toggling and returning the state; `audioStation()` stepping and returning the index; `audioHidden(hidden)` |
@@ -610,11 +625,11 @@ replaces them with measurements.
 | Task | Budget | | Task | Budget |
 |---|---|---|---|---|
 | T00 core, contracts, `common.glsl` | 2,600 | | T08 lights | 2,600 |
-| T01 container overhead | 1,300 | | T09 post | 1,400 |
+| T01 container overhead | 600 | | T09 post | 1,400 |
 | T03 plan | 1,100 | | T10 audio | 3,400 |
 | T04 backdrop | 2,600 | | T11 camera | 2,200 |
 | T05 buildings | 2,800 | | T12 app shell | 1,600 |
-| T06 street life | 2,200 | | **Sum** | **26,100** |
+| T06 street life | 2,200 | | **Sum** | **25,400** |
 | T07 air traffic | 2,300 | | Gate / ceiling | 32,768 / 65,536 |
 
 A task over its budget is not failed; it says so in its plan with what the bytes bought, and T13 and
@@ -624,7 +639,7 @@ T14 decide.
 
 | What | Budget |
 |---|---|
-| Frame time, quality 2, 2560x1440, reference GPU (RTX 4070 SUPER) | 16.6 ms, 95th percentile, on the tour |
+| Frame time, quality 2, 2560x1440, reference GPU (RTX 4070 SUPER) | 95th percentile of frame intervals under 18 ms on the tour (a frame that keeps up on a 60 Hz display measures about 16.7 ms, so 16.6 could never pass there; headless Chromium here ticks every 8 ms [O]) |
 | Draw calls | 30 |
 | Per-frame allocation | none |
 | Time from open to first frame, desktop | 1 s |
@@ -660,7 +675,7 @@ without reading any other task's code.
 
 | Task | Plan | Owns | Needs |
 |---|---|---|---|
-| T00 | `T00-foundation` | `package.json`, lockfile, `tsconfig.json`, `vitest.config.mjs`, `.gitignore`, `.gitattributes`, `CLAUDE.md`, `src/contracts.ts`, `src/common.glsl`, `src/gl.ts`, `src/engine.ts`, `src/glsl.d.ts`, `dev/**`, `scripts/**`, `tests/contracts/**`, `plans/README.md` | none |
+| T00 | `T00-foundation` | `package.json`, lockfile, `tsconfig.json`, `vitest.config.mjs`, `.gitignore`, `.gitattributes`, `CLAUDE.md`, `src/contracts.ts`, `src/common.glsl`, `src/gl.ts`, `src/engine.ts`, `src/engine.glsl`, `src/glsl.d.ts`, `tsconfig.tests.json`, `dev/**`, `scripts/**`, `tests/contracts/**`, `plans/README.md` | none |
 | T01 | `T01-packer` | `tools/pack/**`, `tests/pack/**` | none |
 | T02 | `T02-glslmin` | `tools/glslmin/**`, `tests/glslmin/**` | none |
 | T03 | `T03-city-plan` | `src/plan.ts`, `tests/plan/**` | contracts |
@@ -705,7 +720,8 @@ wave 3:  T13, then T14               alone
 
 | Risk | Mitigation |
 |---|---|
-| The `utf16` container is shown only in Chromium | The spec says the byte order mark wins [W: w3c-bom]; `ascii` ships beside it; the operator's phone is the real test |
+| The `utf16` container is shown only in the Chromium family (four builds [O]) | The spec says the byte order mark wins [W: w3c-bom]; `ascii` ships beside it; the operator's phone is the real test |
+| Unpacking is quadratic and unmeasured on a phone | 55 to 110 ms on the desktop at the expected size; a linear variant exists for about 108 bytes (T14) |
 | A file manager or a chat app re-encodes or previews the file as text | README says to send it as a file; the `ascii` variant is the fallback |
 | The shader minifier renames something it should not | `npm run verify` compares pixels; the build can fall back to strip-only minifying with one flag |
 | A phone lacks float colour targets | 8-bit fallback (§6.6); stated as untested |
