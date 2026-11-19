@@ -6,7 +6,7 @@ depends_on: [T00, T03]
 owns: [src/buildings/**, plans/T05-buildings.md]
 reads: [architecture.md, Agents.md, src/contracts.ts, src/common.glsl, src/gl.ts, src/engine.ts, src/plan.ts]
 budget: 2800
-executor: opus/medium
+executor: opus/high
 updated: 2026-11-18
 ---
 

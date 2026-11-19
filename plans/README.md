@@ -10,7 +10,7 @@ ownership of every path are in [architecture.md](../architecture.md) §14.
 | [T02-glslmin](T02-glslmin.md) | Shader minifier | 1 | opus/high | build tool |
 | [T03-city-plan](T03-city-plan.md) | The deterministic city | 1 | sonnet/high | 1,100 |
 | [T04-backdrop](T04-backdrop.md) | Sky, ground, street lamps | 2 | opus/medium | 2,600 |
-| [T05-buildings](T05-buildings.md) | Neon towers | 2 | opus/medium | 2,800 |
+| [T05-buildings](T05-buildings.md) | Neon towers | 2 | opus/high | 2,800 |
 | [T06-street-life](T06-street-life.md) | Ground traffic and people | 2 | opus/medium | 2,200 |
 | [T07-air-traffic](T07-air-traffic.md) | Flying vehicles | 2 | opus/medium | 2,300 |
 | [T08-lights](T08-lights.md) | Searchlights, pillars, billboards | 2 | opus/medium | 2,600 |
