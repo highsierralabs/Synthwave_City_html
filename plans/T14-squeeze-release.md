@@ -1,13 +1,13 @@
 ---
 id: T14-squeeze-release
 title: Ledger, cut ladder and release
-status: ready
+status: in-progress
 depends_on: [T13]
 owns: [SIZE.md, README.md, LICENSE, docs/release/**, plans/T14-squeeze-release.md]
 reads: [architecture.md, Agents.md, src/**, tools/**, scripts/**, plans/**]
 budget: 0
 executor: opus/high
-updated: 2026-11-18
+updated: 2026-11-19
 ---
 
 # T14: squeeze and release
@@ -131,6 +131,13 @@ tablet, and decides which rung of the ladder is "the" answer.
 Each squeeze step is one commit, so any of them can be reverted alone.
 
 ## 8. Progress
+
+- [x] 2026-11-19 M1 baseline: `npm run build` 17,538 bytes (deflate 16,974 + container 564); `npm run
+  size` table recorded in `SIZE.md`; minified text 39,416 characters, of which GLSL 19,935 (8,295
+  deflated alone) and JavaScript 19,399 (9,193 deflated alone).
+- [x] 2026-11-19 M2 S01 zopfli iterations: no gain (log in `SIZE.md`).
+- [x] 2026-11-19 M2 S02 terser option sets and esbuild's minifier: no gain.
+- [x] 2026-11-19 M2 S03 glslmin names locals per function scope: 17,538 -> 17,224 (-314). Kept.
 
 ## 9. Surprises and discoveries
 

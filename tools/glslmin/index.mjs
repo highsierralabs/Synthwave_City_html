@@ -93,8 +93,18 @@ export function minifyShaders(sources, options = {}) {
     return site;
   });
 
-  // Most used first; ties by name, so the result does not depend on file order.
-  const order = [...count.keys()].sort((a, b) => count.get(b) - count.get(a) || (a < b ? -1 : a > b ? 1 : 0));
+  // Function scopes (T14): the parameter list and body of every top-level function. A name whose
+  // every renamed occurrence lies inside function scopes is local; locals are named per scope, so
+  // the parameters and variables of different functions reuse the same short names. Everything else
+  // (functions, globals, block members, varyings, macros) is global and named once for all files.
+  const scopes = options.locals === false ? files.map(() => []) : files.map(functionScopes);
+  const scopeOf = (f, k) => { for (const s of scopes[f]) if (k > s[0] && k < s[1]) return s; return null; };
+  const isGlobal = new Set();
+  sites.forEach((site, f) => { for (const [k, name] of site) if (!scopeOf(f, k)) isGlobal.add(name); });
+
+  // Global names: most used first; ties by name, so the result does not depend on file order.
+  const globalCount = new Map([...count].filter(([name]) => isGlobal.has(name)));
+  const order = [...globalCount.keys()].sort((a, b) => globalCount.get(b) - globalCount.get(a) || (a < b ? -1 : a > b ? 1 : 0));
   const names = {};
   const gen = shortNames();
   for (const name of order) {
@@ -105,11 +115,92 @@ export function minifyShaders(sources, options = {}) {
   // A short name may equal an original name that is itself renamed (a -> b while x -> a). That is
   // safe: every occurrence of a name either is renamed or has put that name in `forbidden`.
 
+  // Short names a macro body refers to: a macro expanded inside a function must not find a local there.
+  const macroRefs = new Set();
+  files.forEach((toks, f) => {
+    let inDefine = false;
+    for (let k = 0; k < toks.length; k++) {
+      if (toks[k].t === '#') inDefine = toks[k + 1]?.v === 'define';
+      else if (toks[k].t === 'eol') inDefine = false;
+      else if (inDefine && sites[f].has(k) && isGlobal.has(sites[f].get(k))) macroRefs.add(names[sites[f].get(k)]);
+    }
+  });
+
+  // Local names, one scope at a time: most used in the scope first, each the first short name that is
+  // not forbidden, not the short name of a global the scope (or a macro) refers to, and not taken by
+  // another local of the same scope.
+  const localName = files.map(() => new Map()); // token index -> short name
+  sites.forEach((site, f) => {
+    for (const s of scopes[f]) {
+      const used = new Map();
+      const taken = new Set(macroRefs);
+      for (const [k, name] of site) {
+        if (k <= s[0] || k >= s[1]) continue;
+        if (isGlobal.has(name)) taken.add(names[name]);
+        else used.set(name, (used.get(name) ?? 0) + 1);
+      }
+      if (s[2] !== null && site.has(s[2])) taken.add(names[site.get(s[2])]); // the function's own name
+      const local = [...used.keys()].sort((a, b) => used.get(b) - used.get(a) || (a < b ? -1 : a > b ? 1 : 0));
+      const short = new Map();
+      const g = shortNames();
+      for (const name of local) {
+        let n;
+        do { n = g.next().value; } while (forbidden.has(n) || isLanguageName(n) || taken.has(n));
+        taken.add(n);
+        short.set(name, n);
+        // The names map is file-order independent: a local reports its smallest short name.
+        if (names[name] === undefined || n.length < names[name].length || (n.length === names[name].length && n < names[name])) names[name] = n;
+      }
+      for (const [k, name] of site) if (k > s[0] && k < s[1] && short.has(name)) localName[f].set(k, short.get(name));
+    }
+  });
+
   paths.forEach((p, f) => {
     const site = sites[f];
-    out[p] = emit(files[f], (k) => (site.has(k) ? names[site.get(k)] : null));
+    out[p] = emit(files[f], (k) => (localName[f].has(k) ? localName[f].get(k) : site.has(k) ? names[site.get(k)] : null));
   });
   return { out, names, removed };
+}
+
+/**
+ * Top-level function scopes of one file: [open, close, nameIndex] token indices, where open is the
+ * "(" of the parameter list and close the "}" of the body (or the ")" of a prototype). Directive
+ * lines are skipped; braces are counted outside them.
+ */
+function functionScopes(toks) {
+  const out = [];
+  let depth = 0;
+  for (let k = 0; k < toks.length; k++) {
+    const t = toks[k];
+    if (t.t === '#') { while (k < toks.length && toks[k].t !== 'eol') k++; continue; }
+    if (t.v === '{') depth++;
+    else if (t.v === '}') depth--;
+    else if (t.v === '(' && depth === 0 && toks[k - 1]?.t === 'id' && toks[k - 2] && (toks[k - 2].t === 'id' || toks[k - 2].v === ']')) {
+      const close = matchSkippingDirectives(toks, k);
+      if (toks[close + 1]?.v === '{') {
+        const end = matchSkippingDirectives(toks, close + 1);
+        out.push([k, end, k - 1]);
+        k = end;
+      } else if (toks[close + 1]?.v === ';') {
+        out.push([k, close, k - 1]);
+        k = close;
+      }
+    }
+  }
+  return out;
+}
+
+/** Like match, but ignores brackets on directive lines. */
+function matchSkippingDirectives(toks, k) {
+  const open = toks[k].v;
+  const close = open === '(' ? ')' : open === '[' ? ']' : '}';
+  let depth = 0;
+  for (let j = k; j < toks.length; j++) {
+    if (toks[j].t === '#') { while (j < toks.length && toks[j].t !== 'eol') j++; continue; }
+    if (toks[j].v === open) depth++;
+    else if (toks[j].v === close && --depth === 0) return j;
+  }
+  return toks.length - 1;
 }
 
 /**

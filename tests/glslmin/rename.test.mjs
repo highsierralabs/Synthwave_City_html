@@ -135,3 +135,29 @@ describe('renaming', () => {
     expect(out.a).toBe('float longName=1.;');
   });
 });
+
+// T14: locals are named per function scope, so different functions reuse the same short names.
+describe('local names per function', () => {
+  it('reuses short names for the locals of different functions', () => {
+    const { out } = minifyShaders({
+      a: 'float alpha(float first, float second) { float third = first * second; return third; }\n' +
+        'float beta(vec2 other, float more) { float again = other.x + more; return again; }',
+    });
+    // Without reuse the six locals need six names; with it, the two functions share them.
+    const locals = new Set([...out.a.matchAll(/(?:float|vec2) (\w+)[,)=]/g)].map((m) => m[1]));
+    expect(locals.size).toBeLessThanOrEqual(4);
+  });
+
+  it('never gives a local the name of a global the function uses', () => {
+    const src = 'uniform F { vec4 uTime; }; float helper(float x) { return x; }\n' +
+      'float caller(float value) { float result = helper(value) + uTime.x; return result; }';
+    const { out, names } = minifyShaders({ a: src });
+    const body = out.a.slice(out.a.indexOf(`float ${names.caller}(`));
+    const locals = [...body.matchAll(/float (\w+)[,)=;]/g)].map((m) => m[1]).filter((n) => n !== names.caller);
+    expect(locals.length).toBe(2);
+    for (const n of locals) {
+      expect(n).not.toBe(names.helper);
+      expect(n).not.toBe(names.uTime);
+    }
+  });
+});
