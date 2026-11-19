@@ -158,9 +158,8 @@ with its evidence, is in [plans/](plans/).
   rebuilds; its pictures were the reference for the look.
 - Two single-file WebGPU demos prompted the idea of doing it in one file:
   [Afterglow City](https://github.com/J-o-h-n-M/afterglow-city) by J-o-h-n-M (127,617 bytes) and
-  [Abyssal Garden](https://github.com/Noniv/abyssal-garden) by Noniv (99,514 bytes), on which it was
-  built. No code is taken from either.
-  They are not named in this repository's records.
+  [Abyssal Garden](https://github.com/Noniv/abyssal-garden) by Noniv (99,514 bytes), which Afterglow
+  City is based on. No code is taken from either.
 - The packer measurement used [Roadroller](https://github.com/lifthrasiir/roadroller) 2.1.0 by Kang
   Seonghoon, run in a scratch folder; it is not part of the build.
 - Built with TypeScript, esbuild, terser, @gfx/zopfli, Vitest and Playwright.
