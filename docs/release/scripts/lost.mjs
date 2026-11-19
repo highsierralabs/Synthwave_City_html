@@ -1,0 +1,34 @@
+// Context loss on the packed file: does the frame loop stop, does the notice show, does restore reload?
+import { resolve } from 'node:path';
+import { fileUrl, launch } from '../../scripts/lib/browser.mjs';
+const file = resolve(process.argv[2] ?? 'dist/synthwave-city.html');
+const browser = await launch('gpu');
+const page = await browser.newPage({ viewport: { width: 800, height: 450 } });
+const errors = [];
+page.on('pageerror', (e) => errors.push(e.message));
+page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+await page.addInitScript(() => {
+  window.__raf = 0;
+  const r = window.requestAnimationFrame.bind(window);
+  window.requestAnimationFrame = (f) => { window.__raf++; return r(f); };
+  const g = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function (...a) { const c = g.apply(this, a); if (a[0] === 'webgl2' && c && !window.__gl) window.__gl = c; return c; };
+});
+await page.goto(fileUrl(file));
+await page.waitForFunction(() => window.__raf > 30, null, { timeout: 20000 });
+const a = await page.evaluate(() => window.__raf);
+await page.waitForTimeout(1000);
+const b = await page.evaluate(() => window.__raf);
+await page.evaluate(() => { window.__ext = window.__gl.getExtension('WEBGL_lose_context'); window.__ext.loseContext(); });
+await page.waitForTimeout(300);
+const c = await page.evaluate(() => window.__raf);
+await page.waitForTimeout(1000);
+const d = await page.evaluate(() => window.__raf);
+const notice = await page.evaluate(() => document.querySelector('m')?.textContent);
+console.log(`rAF calls: 1 s running ${b - a}; 1 s after the loss ${d - c}`);
+console.log(`notice: ${notice}`);
+const nav = page.waitForNavigation({ timeout: 10000 }).then(() => 'reloaded', () => 'no reload');
+await page.evaluate(() => window.__ext.restoreContext());
+console.log(`restore: ${await nav}`);
+console.log(`errors: ${errors.length ? errors.join(' | ') : 'none'}`);
+await browser.close();
