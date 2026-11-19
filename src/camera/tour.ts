@@ -13,7 +13,7 @@ import { AV_HALF, AVE, CELL, P, SEED, ST_HALF, TILE } from '../contracts';
 import { heightAt, megaCount, megas } from '../plan';
 
 /** Input, written by the listeners in index.ts and read by the steps. */
-export const IN = new Float32Array(6);
+export const IN = new Float32Array(7);
 /** Held keys: bit 0 W, 1 S, 2 A, 3 D, 4 Q, 5 E, 6 to 9 the arrows left, right, up, down, 10 Shift. */
 export const I_KEYS = 0;
 /** Drag in CSS pixels since the last step; the step consumes it. */
@@ -25,6 +25,9 @@ export const I_DOWN = 3;
 export const I_CALM = 4;
 /** Wheel delta since the last step; the step consumes it. Zooms the field of view. */
 export const I_ZOOM = 5;
+/** Touch and pen pointers down (the mouse is not counted). In free flight one flies forward and a
+ *  second one boosts, as in the three.js Synthwave City. */
+export const I_TOUCH = 6;
 
 const STEP = 1 / 60;
 const PI2 = Math.PI / 2;
@@ -173,22 +176,25 @@ function out(x: number, z: number, yaw: number, pitch: number): void {
 function step(): void {
   const dt = STEP;
   const keys = IN[I_KEYS]!;
-  // Drag, or the arrow keys at 1.5 rad/s.
-  const lx = IN[I_DX]! * .004 + ((keys >> 6 & 1) - (keys >> 7 & 1)) * dt * 1.5;
-  const ly = IN[I_DY]! * .004 + ((keys >> 8 & 1) - (keys >> 9 & 1)) * dt * 1.5;
+  // Drag, or the arrow keys at 1.5 rad/s. Positive yaw turns left and positive pitch looks up, so a
+  // drag to the right or downward subtracts: the view follows the pointer, like a mouse look and
+  // like the three.js Synthwave City.
+  const lx = ((keys >> 6 & 1) - (keys >> 7 & 1)) * dt * 1.5 - IN[I_DX]! * .004;
+  const ly = ((keys >> 8 & 1) - (keys >> 9 & 1)) * dt * 1.5 - IN[I_DY]! * .004;
   fov = Math.max(.5, Math.min(1.6, fov * Math.exp(IN[I_ZOOM]! * .001)));
   IN[I_DX] = IN[I_DY] = IN[I_ZOOM] = 0;
   if (mode) {
-    // Free flight: velocity eases toward the keys' wish; the eye slides along walls, or is pushed up.
+    // Free flight: velocity eases toward the wish of the keys and fingers (one finger down flies
+    // forward, a second one boosts); the eye slides along walls, or is pushed up.
     vYaw += lx;
     vPitch = clamp(vPitch + ly, 1.5);
     const sy = Math.sin(vYaw);
     const cy = Math.cos(vYaw);
     const sp = Math.sin(vPitch);
     const cp = Math.cos(vPitch);
-    const fwd = (keys & 1) - (keys >> 1 & 1) + +(IN[I_DOWN]! > 1);
+    const fwd = (keys & 1) - (keys >> 1 & 1) + +(IN[I_TOUCH]! > 0);
     const side = (keys >> 3 & 1) - (keys >> 2 & 1);
-    const v = keys & 1024 ? 150 : 30;
+    const v = keys & 1024 || IN[I_TOUCH]! > 1 ? 150 : 30;
     const k = dt * 4;
     ux += ((-sy * cp * fwd + cy * side) * v - ux) * k;
     uy += ((sp * fwd + (keys >> 5 & 1) - (keys >> 4 & 1)) * v - uy) * k;

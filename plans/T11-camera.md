@@ -7,7 +7,7 @@ owns: [src/camera/**, tests/camera/**, plans/T11-camera.md]
 reads: [architecture.md, Agents.md, src/contracts.ts, src/engine.ts, src/plan.ts]
 budget: 2200
 executor: opus/medium
-updated: 2026-11-18
+updated: 2026-11-19
 ---
 
 # T11: camera
@@ -126,6 +126,16 @@ Shots go in `shots/T11/`, scratch in `.tmp/T11/`. Both can be deleted at any tim
 - [x] 2026-11-18 M5: `npm run size -- camera` = 2,142 bytes against 2,200, with two optional items in.
 - [x] 2026-11-18 `npm run check:task -- T11` PASS. Status done.
 - Left: the orbit segment (optional, not built), pinch zoom (not built; wheel only), the human checks.
+- [x] 2026-11-19 Reopened and closed by T15 (plans/T15-playtest-fixes.md), by the orchestrator, after
+  the operator's play test. (1) The drag turned the view against the pointer on both axes; it now
+  follows it, as in the three.js Synthwave City (`tour.ts`, the signs of `lx` and `ly`; the arrow
+  keys were right and are unchanged). (2) In free flight one finger now flies forward while it
+  steers and a second boosts; before, only a second finger flew and nothing boosted. New input slot
+  `I_TOUCH`. A mouse press still only looks. (3) When the steering finger lifts, the next finger
+  that moves steers. Three new unit tests (16 in the file), two seen failing first; `npm run input`
+  9 of 9 with real mouse and touch events. `npm run size -- camera`: 2,200 of 2,200. The M3 check of
+  2026-11-18 (`.tmp/T11/flight.mjs`) exercised the gestures but never asserted which way the view
+  turned, which is how the reversed drag got through.
 
 ## 9. Surprises and discoveries
 

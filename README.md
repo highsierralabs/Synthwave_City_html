@@ -1,6 +1,6 @@
 # Synthwave City 64k
 
-An endless synthwave megacity you fly through, in **one HTML file of 17,146 bytes**. Neon towers with
+An endless synthwave megacity you fly through, in **one HTML file of 17,208 bytes**. Neon towers with
 window grids, flying traffic in sky lanes, streets full of cars with head and tail lights, searchlights
 and holographic billboards, wet asphalt that mirrors it all, a striped sun, bloom and fog, and a
 soundtrack synthesized live with the city pulsing on the beat.
@@ -26,8 +26,8 @@ changed no pixel (`npm run verify`); they are re-encoded as JPEG for this page.
 
 | File | Bytes | What it is |
 |---|---|---|
-| [`docs/release/synthwave-city.html`](docs/release/synthwave-city.html) | 17,146 | The product. UTF-16 with a byte order mark: the program is deflated and stored as one big number, one character per digit, and a 237-character unpacker turns it back into JavaScript. |
-| [`docs/release/synthwave-city.safe.html`](docs/release/synthwave-city.safe.html) | 22,253 | The same program as plain ASCII (base64), for anything that damages the first file. |
+| [`docs/release/synthwave-city.html`](docs/release/synthwave-city.html) | 17,208 | The product. UTF-16 with a byte order mark: the program is deflated and stored as one big number, one character per digit, and a 237-character unpacker turns it back into JavaScript. |
+| [`docs/release/synthwave-city.safe.html`](docs/release/synthwave-city.safe.html) | 22,333 | The same program as plain ASCII (base64), for anything that damages the first file. |
 
 The first file is not text. An editor shows noise, and pasting it somewhere breaks it. Move it as a
 file: download it, copy it, attach it.
@@ -52,9 +52,9 @@ MDN); without WebGL2 it says so. See "What was tested" for which browsers have a
 | Key | Does | Touch |
 |---|---|---|
 | (watch) | A drone tours the city on its own, without end | |
-| drag | Look around; the view eases back when you let go | drag |
+| drag | Look around (the view follows the pointer); on the tour it eases back when you let go | drag |
 | `Space` | Free flight on or off | ▲ |
-| `W` `A` `S` `D`, `Q` `E`, `Shift` | Fly, down and up, faster (free flight) | hold a second finger to fly forward |
+| `W` `A` `S` `D`, `Q` `E`, `Shift` | Fly, down and up, faster (free flight) | hold a finger down to fly forward and drag it to steer; add a second finger to go faster |
 | arrows, mouse wheel | Look, zoom | |
 | `M` | Sound on or off | ♪ |
 | `R` | Next station (two) | ♫ |
@@ -75,21 +75,21 @@ judged here; the full table, the pictures and the judgement per rung are in [SIZ
 
 | Bytes | What this version gives up (each row also gives up everything above it) |
 |---|---|
-| **17,146** | Nothing: the shipped file |
-| 16,824 | Messages naming each action, the key list on the start card, fullscreen, hiding the interface |
+| **17,208** | Nothing: the shipped file |
+| 16,880 | Messages naming each action, the key list on the start card, fullscreen, hiding the interface |
 | 16,246 | Free flight; the drone tour and drag-to-look stay |
-| 16,070 | The midnight and miami moods |
-| 16,022 | The second music station |
-| 15,780 | The touch buttons and the quality keys |
-| 14,698 | Holographic billboards and signs with invented words |
-| 14,392 | People on the sidewalks |
-| 14,112 | Street lamps |
-| 14,024 | Film grain, scanlines, vignette, colour fringing |
-| 13,798 | Stars and the wireframe mountains |
-| 13,662 | Reflections in the wet road |
-| 12,812 | Searchlights, beacon pillars, laser fans |
-| 12,546 | Shop fronts, sign panels, equaliser facades and roof details on the towers |
-| **12,370** | The lead melody, toms and swells; kick, snare, hats, bass and chords stay |
+| 16,086 | The midnight and miami moods |
+| 16,038 | The second music station |
+| 15,790 | The touch buttons and the quality keys |
+| 14,714 | Holographic billboards and signs with invented words |
+| 14,336 | People on the sidewalks |
+| 14,208 | Street lamps |
+| 14,120 | Film grain, scanlines, vignette, colour fringing |
+| 13,814 | Stars and the wireframe mountains |
+| 13,686 | Reflections in the wet road |
+| 12,836 | Searchlights, beacon pillars, laser fans |
+| 12,572 | Shop fronts, sign panels, equaliser facades and roof details on the towers |
+| **12,396** | The lead melody, toms and swells; kick, snare, hats, bass and chords stay |
 
 The checklist ("still Synthwave City"): the tour runs without end and without a visible edge or pop;
 towers are lit with window grids and neon trim, with a megatower in most views; flying traffic moves
@@ -130,7 +130,15 @@ running on the GPU, from `file://`:
 Not tested: **Firefox and Safari** (nothing in this repository runs them), **any real phone or
 tablet** (phone-sized pictures and start-up times under CPU throttling are desktop stand-ins), whether
 the music sounds good, frame rate on any GPU other than this one, and the touch controls with real
-fingers. The operator's check on an Android phone and tablet is the open human check.
+fingers.
+
+The operator's first play test (2026-11-19) found three defects in the 17,146-byte build: the drag
+turned the view the wrong way, a finger did not fly forward in free flight, and the headlights
+flickered in step. All three are fixed in this build (62 bytes; `plans/T15-playtest-fixes.md`). The
+controls are proven with scripted mouse and touch events (`npm run input`). The flicker never showed
+on this desktop's GPU; it was reproduced and fixed on Chromium's software rasteriser
+(`npm run steady`), and whether that was the flicker the operator saw is for the operator's device
+to confirm.
 
 ## Building it
 

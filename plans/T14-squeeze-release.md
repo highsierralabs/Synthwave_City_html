@@ -152,6 +152,12 @@ Each squeeze step is one commit, so any of them can be reverted alone.
 - [x] 2026-11-19 M4 ladder: 15 rungs built, smoke-tested and photographed (17,146 down to 12,370).
 - [x] 2026-11-19 M5 README, LICENSE, SIZE.md, `docs/release/` (product, twin, smallest rung, ladder
   sheets, measurement scripts); tracked files scanned; final check, verify and smoke pass.
+- [x] 2026-11-19 Reopened and closed by T15 (plans/T15-playtest-fixes.md), by the orchestrator: the
+  release files and the ladder were rebuilt from the fixed sources. Shipped 17,208 bytes (was 17,146),
+  ASCII twin 22,333, rung 14 12,396 (was 12,370); all fifteen rungs type-check and print `SMOKE OK`.
+  `ladder.mjs` rung r02 carries the corrected drag direction. SIZE.md and README.md updated; the
+  ladder's pictures, draw counts and pixel differences, sections M1 to M3 and the Roadroller and
+  unpacker measurements were not repeated.
 
 ## 9. Surprises and discoveries
 

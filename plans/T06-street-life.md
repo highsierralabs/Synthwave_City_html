@@ -7,7 +7,7 @@ owns: [src/street/**, plans/T06-street-life.md]
 reads: [architecture.md, Agents.md, src/contracts.ts, src/common.glsl, src/gl.ts, src/engine.ts, src/plan.ts]
 budget: 2200
 executor: opus/medium
-updated: 2026-11-18
+updated: 2026-11-19
 ---
 
 # T06: street life
@@ -104,6 +104,11 @@ Shots go in `shots/T06/`, scratch in `.tmp/T06/`. Both can be deleted at any tim
 - [x] 2026-11-18 Fixed a density defect found at quality 0 (see Surprises). Acceptance re-run.
 
 Nothing is left. Follow-ups for the art pass are in Outcomes.
+- [x] 2026-11-19 Reopened and closed by T15 (plans/T15-playtest-fixes.md), by the orchestrator. The
+  ground no longer hides what is below it (it writes a constant depth), so car bodies, which reached
+  0.45 m under the road, now stop at it: `l.y = max(l.y, 0.0)` in `body.glsl`, before the pattern
+  coordinate is taken. The lights are unchanged; they were the victim, not the cause. Street view
+  before and after: 3 of 921,600 pixels differ. `npm run size -- street`: 1,204 of 2,200.
 
 ## 9. Surprises and discoveries
 

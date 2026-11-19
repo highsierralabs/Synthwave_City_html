@@ -3,7 +3,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { AV_HALF, AVE, CELL, P, P_FOV, P_PITCH, P_X, P_Y, P_YAW, P_Z, SEED, ST_HALF, TILE } from '../../src/contracts';
 import { buildPlan, heightAt, megaCount, megas } from '../../src/plan';
-import { camReset, camToggle, camUpdate, I_CALM, I_DOWN, I_DX, I_KEYS, I_ZOOM, IN } from '../../src/camera/tour';
+import { camReset, camToggle, camUpdate, I_CALM, I_DOWN, I_DX, I_DY, I_KEYS, I_TOUCH, I_ZOOM, IN } from '../../src/camera/tour';
 
 const STEP = 1 / 60;
 const DEG = Math.PI / 180;
@@ -146,11 +146,14 @@ describe('tour', () => {
     expect(Math.abs(P[P_YAW]! - turned)).toBeLessThan(0.05);
     IN[I_DOWN] = 0;
     for (let n = 0; n < 60 * 6; n++) camUpdate(STEP);
-    // Compare with a run that never looked: same tour, so the yaw is back on it.
+    // Compare with a run that never looked: the same tour, at the same two moments. (Until the
+    // drag direction was fixed on 2026-11-19 the first comparison was made against the later
+    // moment, where the tour itself had turned.)
     const back = P[P_YAW]!;
     reset();
-    for (let n = 0; n < 60 + 3 + 360; n++) camUpdate(STEP);
+    for (let n = 0; n < 60 + 2; n++) camUpdate(STEP);
     expect(Math.abs(turned - P[P_YAW]!)).toBeGreaterThan(0.5);
+    for (let n = 0; n < 1 + 360; n++) camUpdate(STEP);
     expect(Math.abs(back - P[P_YAW]!)).toBeLessThan(0.05);
   });
 });
@@ -248,5 +251,76 @@ describe('free flight', () => {
     for (let n = 0; n < 60 * 8; n++) camUpdate(STEP), track();
     expect(move).toBeLessThan(4);
     expect(turn).toBeLessThan(5 * DEG);
+  });
+});
+
+// Operator play test, 2026-11-19: the drag was the wrong way round, and a finger did not fly.
+describe('drag and touch', () => {
+  beforeAll(() => buildPlan(SEED));
+
+  /** Yaw and pitch change caused by a drag of (dx, dy) pixels, against the same run without it. */
+  const drag = (dx: number, dy: number, flight: number): [number, number] => {
+    const run = (x: number, y: number): [number, number] => {
+      reset();
+      for (let n = 0; n < 60; n++) camUpdate(STEP);
+      if (flight) camToggle();
+      IN[I_DOWN] = 1;
+      IN[I_DX] = x;
+      IN[I_DY] = y;
+      for (let n = 0; n < 3; n++) camUpdate(STEP);
+      return [P[P_YAW]!, P[P_PITCH]!];
+    };
+    const a = run(0, 0);
+    const b = run(dx, dy);
+    return [b[0] - a[0], b[1] - a[1]];
+  };
+
+  it('dragging right looks right and dragging down looks down, like a mouse, on the tour and in flight', () => {
+    for (const flight of [0, 1]) {
+      // Positive yaw turns left and positive pitch looks up (engine.ts), so both must fall.
+      const [yaw] = drag(100, 0, flight);
+      expect(yaw).toBeLessThan(-0.2);
+      const [, pitch] = drag(0, 100, flight);
+      expect(pitch).toBeLessThan(-0.2);
+    }
+  });
+
+  /** Metres flown along the view direction in one second of free flight with the given input. */
+  const flown = (down: number, touch: number): number => {
+    reset();
+    for (let n = 0; n < 60; n++) camUpdate(STEP);
+    camToggle();
+    // Let the speed carried over from the tour die away first.
+    for (let n = 0; n < 60 * 4; n++) camUpdate(STEP);
+    const a = pose();
+    IN[I_DOWN] = down;
+    IN[I_TOUCH] = touch;
+    for (let n = 0; n < 60; n++) camUpdate(STEP);
+    const b = pose();
+    const yaw = b[3]!;
+    return wrap(b[0]! - a[0]!) * -Math.sin(yaw) + wrap(b[2]! - a[2]!) * -Math.cos(yaw);
+  };
+
+  it('in free flight one finger flies forward, two boost, and a mouse press only looks', () => {
+    const rest = flown(0, 0);
+    const mouse = flown(1, 0);
+    const one = flown(1, 1);
+    const two = flown(2, 2);
+    expect(Math.abs(rest)).toBeLessThan(1);
+    expect(Math.abs(mouse)).toBeLessThan(1);
+    expect(one).toBeGreaterThan(15);
+    expect(two).toBeGreaterThan(one * 2.5);
+  });
+
+  it('on the tour a finger does not change where the camera goes', () => {
+    reset();
+    for (let n = 0; n < 120; n++) camUpdate(STEP);
+    const a = pose();
+    reset();
+    for (let n = 0; n < 60; n++) camUpdate(STEP);
+    IN[I_DOWN] = IN[I_TOUCH] = 2;
+    for (let n = 0; n < 60; n++) camUpdate(STEP);
+    const b = pose();
+    for (let i = 0; i < 3; i++) expect(b[i]!).toBeCloseTo(a[i]!, 6);
   });
 });

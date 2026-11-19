@@ -122,8 +122,8 @@ export function cameraMode(): number {
   return 0;
 }
 `),
-      cut('src/camera/tour.ts', '  const keys = IN[I_KEYS]!;', '    return;\n  }\n', `  const lx = IN[I_DX]! * .004;
-  const ly = IN[I_DY]! * .004;
+      cut('src/camera/tour.ts', '  const keys = IN[I_KEYS]!;', '    return;\n  }\n', `  const lx = -IN[I_DX]! * .004;
+  const ly = -IN[I_DY]! * .004;
   IN[I_DX] = IN[I_DY] = 0;
 `),
       rep('src/camera/tour.ts', `  idle = IN[I_DOWN] || keys & 960 ? 0 : idle + dt;`, `  idle = IN[I_DOWN] ? 0 : idle + dt;`),

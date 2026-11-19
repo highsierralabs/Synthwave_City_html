@@ -7,7 +7,7 @@ owns: [src/backdrop/**, plans/T04-backdrop.md]
 reads: [architecture.md, Agents.md, src/contracts.ts, src/common.glsl, src/gl.ts, src/engine.ts, src/plan.ts]
 budget: 2600
 executor: opus/medium
-updated: 2026-11-18
+updated: 2026-11-19
 ---
 
 # T04: backdrop
@@ -118,6 +118,12 @@ Shots go in `shots/T04/`, scratch in `.tmp/T04/`. Both can be deleted at any tim
 - [x] 2026-11-18 M5 optional items: all four kept (mountain ridge, crossings, plaza floor grid, star
   twinkle). Measured 1,540 bytes against 2,600.
 - [x] 2026-11-18 Acceptance run, evidence below. Status done.
+- [x] 2026-11-19 Reopened and closed by T15 (plans/T15-playtest-fixes.md), by the orchestrator. Defect:
+  the ground quad's interpolated depth is not the same on every rasteriser; on Chromium's software
+  rasteriser it hid the lower part of every car light in alternate frames (the operator's "headlights
+  flicker, all at the same time"). Fix: `gl_FragDepth = 0.99999` in `ground.glsl`, a constant behind
+  the whole city and in front of the sky. `npm run steady` proves it and fails without it. GPU
+  pictures unchanged (at most 4 of 921,600 pixels). `npm run size -- backdrop`: 1,436 of 2,600.
 
 ## 9. Surprises and discoveries
 

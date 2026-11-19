@@ -123,7 +123,7 @@ those can grow the file.
 ### 3.1 Where the bytes go
 
 This was the estimate before anything was built [I]; §11.2 has the per-task budgets that add up to
-it. **The measured result is 17,146 bytes** (§3.5, `SIZE.md`).
+it. **The measured result is 17,208 bytes** (§3.5, `SIZE.md`).
 
 ```
 unpacker and container overhead      ~0.6 kB     measured [O]
@@ -252,8 +252,9 @@ screenshot per rung. The experience checklist that defines "still Synthwave City
 The smallest rung that still passes all seven is the answer to the question. Rungs above it are what
 the remaining bytes buy.
 
-**Result [O: T14, 2026-11-19].** The shipped file, with every feature, is **17,146 bytes**. The
-ladder has 15 rungs down to **12,370 bytes**, the smallest build that still passes the checklist as
+**Result [O: T14 and T15, 2026-11-19].** The shipped file, with every feature, is **17,208 bytes**
+(17,146 before the fixes from the first play test). The
+ladder has 15 rungs down to **12,396 bytes**, the smallest build that still passes the checklist as
 far as it can be judged on this machine: points 2 to 5 by eye, point 1 inferred from unchanged code,
 and points 6 and 7 by script only, because nobody has listened to it or opened it on a phone.
 `SIZE.md` has every rung with its cost and pictures.
@@ -528,9 +529,12 @@ into `F`; otherwise the engine supplies the same slots from its clock, so the ci
   height: cruising an avenue, banking through an intersection, climbing past a megatower, dropping to
   street level. Deterministic from the seed and the clock, endless.
 - **Free look on the tour:** drag (finger or mouse) to turn the view while the tour flies on; it eases
-  back when released.
-- **Free flight:** `W A S D`, `Q`/`E` for down and up, `Shift` to boost, drag to look; on touch, drag
-  to look and hold a second finger to fly. The camera is kept out of buildings with `heightAt`.
+  back when released. The view follows the pointer on both axes: drag right to look right, drag down
+  to look down, as in the three.js Synthwave City [O: T15].
+- **Free flight:** `W A S D`, `Q`/`E` for down and up, `Shift` to boost, drag to look. On touch a
+  finger held down flies forward while its drag steers, and a second finger boosts; a mouse press
+  only looks. When the steering finger lifts, the next finger that moves steers. The camera is kept
+  out of buildings with `heightAt`.
   `Space` returns to the tour.
 
 The camera writes `P` and nothing else.
@@ -663,6 +667,12 @@ T14 decide.
 - A shader that fails to compile is reported on the console and in `window.__E`, and its layer draws
   nothing; the rest of the city still renders. The packed build keeps this check.
 - `prefers-reduced-motion`: the tour flies slower and without banking.
+- The ground writes a constant depth (`gl_FragDepth = 0.99999`, the depth of a point 50 km away)
+  instead of its own: it is one quad 80 km wide, and its interpolated depth is not the same on every
+  rasteriser. On SwiftShader it came out too near, differently every frame, and hid the lower part
+  of every car light in step [O: T15]; by how much was not measured. Nothing is below the ground, so
+  it only has to be behind the city and in front of the sky. Car bodies stop at the road for the
+  same reason: nothing hides what is below it any more.
 
 ## 13. Verification
 
@@ -674,6 +684,8 @@ T14 decide.
 | Screenshots | `node scripts/shot.mjs` | what a layer or the whole city looks like at a fixed camera and time; the author must open the image and look |
 | Pixel identity | `npm run verify` | the full pipeline (shader minifier, terser, container) applied to a harness with every product layer and post draws the same frames as the unminified sources. The app shell, audio and camera are not in that comparison; `smoke` covers the shipped file |
 | Smoke | `npm run smoke` | the packed file boots from `file://`, reports no errors, draws a non-empty frame and holds a frame-time budget |
+| Input | `npm run input` | the camera's real pointer listeners, sent real mouse and touch events in Chromium, turn and fly the way section 8 says. Not a real finger on a real screen |
+| Steady lights | `npm run steady` | on Chromium's software rasteriser, whose depth interpolation is coarser than this GPU's, the car lights do not blink in step across six consecutive tour frames. It fails without the constant ground depth (section 6, `ground.glsl`) |
 | Size | `npm run size` | the gate, and each module's marginal cost |
 
 Tested here: Chromium on Windows with an NVIDIA GPU. The operator has an Android phone and tablet.

@@ -69,6 +69,11 @@ void main() {
     + wet * (texture(T1, uv).rgb + step(uRes.z, 0.5) * (fogColor(v) * 0.6
       + pal(3.0) * 3.0 * pow(clamp(dot(normalize(v.xz + 1e-5), normalize(uSun.xz)), 0.0, 1.0), 400.0)));
   O = vec4(fog(c, vPos), 1.0);
+  // One quad 80 km wide cannot be trusted for depth: on some rasterisers its interpolated depth is
+  // off by metres at a few hundred metres and changes every frame, which cut every headlight to a
+  // sliver in step. Nothing is below the ground, so it sits at a constant depth behind the whole
+  // city (the depth of 50 km) and in front of the sky (1.0).
+  gl_FragDepth = 0.99999;
 }
 #else
 out vec3 vPos;

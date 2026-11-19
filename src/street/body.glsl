@@ -25,6 +25,7 @@ void main() {
   vec3 a = car(gl_InstanceID >> 1, fw, seed), n;
   vec3 l = cube(n) * (cab > 0.0 ? vec3(0.75, 0.5, 1.15) : vec3(0.9, 0.65, 2.25));
   l += vec3(0.0, 0.2 + 0.65 * cab, 0.3 * cab);
+  l.y = max(l.y, 0.0); // the ground no longer hides what is below it (ground.glsl)
   vL = l;
   vN = n;
   vCol = pal(seed * 8.0);

@@ -11,10 +11,11 @@ root, for example `node .tmp/T14/ladder.mjs 0 14`.
 
 ## The answer
 
-- **Shipped: 17,146 bytes** (`docs/release/synthwave-city.html`; ASCII twin 22,253 bytes). Every
-  feature that was built, after a lossless squeeze from 17,538.
+- **Shipped: 17,208 bytes** (`docs/release/synthwave-city.html`; ASCII twin 22,333 bytes). Every
+  feature that was built, after a lossless squeeze from 17,538 to 17,146 and then 62 bytes of fixes
+  from the operator's first play test (T15, below).
 - **Smallest rung built that still passes the seven-point checklist, as far as it could be judged
-  here: 12,370 bytes** (rung 14, `docs/release/ladder/synthwave-city-r14.html`). It keeps the endless
+  here: 12,396 bytes** (rung 14, `docs/release/ladder/synthwave-city-r14.html`). It keeps the endless
   tour with drag-to-look, lit towers with window grids, trim, crowns, spires and megatower bands, the
   sky lanes of craft, street traffic with head and tail lights, the striped sun, bloom and fog, one
   music track (kick, snare, hats, bass, pad) that drives the beat, the phone start-up path and the
@@ -25,6 +26,20 @@ root, for example `node .tmp/T14/ladder.mjs 0 14`.
   the operator's checks. **Which rung is "the" answer is the operator's decision.**
 - Rungs further down were not built: every remaining cut removes a checklist item (air traffic,
   street traffic, the music, the tour) or a robustness item.
+
+## After the first play test (T15, 2026-11-19)
+
+The operator played the 17,146-byte file and found three defects: the drag turned the view the
+wrong way, a finger did not fly in free flight, and the headlights flickered in step
+(`plans/T15-playtest-fixes.md`). The fixes cost **62 bytes: 17,146 to 17,208**. `npm run size` puts
+the camera at 2,200 (was 2,144, budget 2,200), the street at 1,204 and the backdrop at 1,436. The
+ladder was rebuilt from the fixed sources, every rung type-checked and smoke-tested again; its byte
+and saving columns below are the new ones.
+
+Not repeated on the new build, so still as measured on the 17,146-byte one: sections M1 to M3, the
+unpacker timings, the Roadroller experiment, and the ladder's draw counts, pixel differences and
+pictures. The fixes change no draw call, and on this GPU they changed at most 4 of 921,600 pixels
+in four views of the full build.
 
 ## M1. Baseline (before the squeeze)
 
@@ -142,23 +157,25 @@ all layers, 960x540). On every rung a click started the AudioContext (`running`,
 
 | Rung | Removed (cumulative) | Bytes | Saved | Draws | Pixels changed from the rung above (skyline / street / tour, of 518,400) | Picture |
 |---|---|---|---|---|---|---|
-| r00 | nothing: the shipped file | 17,146 | | 34 | | [r00](docs/release/ladder/r00.jpg) |
-| r01 | Toasts, the key list on the start card, fullscreen (F and its button), H to hide the interface, the blocked context menu | 16,824 | 322 | 34 | 0 / 0 / 0 | as r00 |
-| r02 | Free flight (WASD, Q/E, Shift, second finger, Space and its button), arrow-key look, wheel zoom; the tour and drag-to-look stay | 16,246 | 578 | 34 | 0 / 0 / 0 | as r00 |
-| r03 | The midnight and miami moods (N and its button) | 16,070 | 176 | 34 | 0 / 0 / 0 | as r00 |
-| r04 | The second station (R and its button) | 16,022 | 48 | 34 | 0 / 0 / 0 | as r00 |
-| r05 | The touch bar and the 1 2 3 quality keys (quality follows the device type; render scale still adapts) | 15,780 | 242 | 34 | 0 / 0 / 0 | as r00 |
-| r06 | Holographic billboards, tickers, face signs, the glyph atlas | 14,698 | 1,082 | 30 | 28,779 / 16,639 / 7,871 | [r06](docs/release/ladder/r06.jpg) |
-| r07 | The people on the sidewalks | 14,392 | 306 | 28 | 0 / 18,981 / 0 | [r07](docs/release/ladder/r07.jpg) |
-| r08 | Street lamps and their pools of light | 14,112 | 280 | 26 | 6,274 / 52,687 / 5,438 | [r08](docs/release/ladder/r08.jpg) |
-| r09 | Chromatic fringe, vignette, scanlines, film grain | 14,024 | 88 | 26 | whole frame (grain) | [r09](docs/release/ladder/r09.jpg) |
-| r10 | Stars and the wireframe mountain ridge | 13,798 | 226 | 26 | 41,796 / 10,599 / 28,697 | [r10](docs/release/ladder/r10.jpg) |
-| r11 | The mirror pass: the wet road no longer reflects the city (sheen and sun streak stay) | 13,662 | 136 | 19 | 21,654 / 187,532 / 23,463 | [r11](docs/release/ladder/r11.jpg) |
-| r12 | Searchlights, beacon pillars, laser fans, aviation lights, plaza octahedra (the lights layer) | 12,812 | 850 | 17 | 169,329 / 39,851 / 74,206 | [r12](docs/release/ladder/r12.jpg) |
-| r13 | Sign panels, storefronts, equaliser facades, floor lines, roof slats, rings and dots, switching window runs | 12,546 | 266 | 17 | 134,494 / 217,916 / 308,517 | [r13](docs/release/ladder/r13.jpg) |
-| **r14** | **The lead and its echo, toms, the noise riser and swell** | **12,370** | **176** | 17 | 0 / 0 / 0 | as r13 |
+| r00 | nothing: the shipped file | 17,208 | | 34 | | [r00](docs/release/ladder/r00.jpg) |
+| r01 | Toasts, the key list on the start card, fullscreen (F and its button), H to hide the interface, the blocked context menu | 16,880 | 328 | 34 | 0 / 0 / 0 | as r00 |
+| r02 | Free flight (WASD, Q/E, Shift, second finger, Space and its button), arrow-key look, wheel zoom; the tour and drag-to-look stay | 16,246 | 634 | 34 | 0 / 0 / 0 | as r00 |
+| r03 | The midnight and miami moods (N and its button) | 16,086 | 160 | 34 | 0 / 0 / 0 | as r00 |
+| r04 | The second station (R and its button) | 16,038 | 48 | 34 | 0 / 0 / 0 | as r00 |
+| r05 | The touch bar and the 1 2 3 quality keys (quality follows the device type; render scale still adapts) | 15,790 | 248 | 34 | 0 / 0 / 0 | as r00 |
+| r06 | Holographic billboards, tickers, face signs, the glyph atlas | 14,714 | 1,076 | 30 | 28,779 / 16,639 / 7,871 | [r06](docs/release/ladder/r06.jpg) |
+| r07 | The people on the sidewalks | 14,336 | 378 | 28 | 0 / 18,981 / 0 | [r07](docs/release/ladder/r07.jpg) |
+| r08 | Street lamps and their pools of light | 14,208 | 128 | 26 | 6,274 / 52,687 / 5,438 | [r08](docs/release/ladder/r08.jpg) |
+| r09 | Chromatic fringe, vignette, scanlines, film grain | 14,120 | 88 | 26 | whole frame (grain) | [r09](docs/release/ladder/r09.jpg) |
+| r10 | Stars and the wireframe mountain ridge | 13,814 | 306 | 26 | 41,796 / 10,599 / 28,697 | [r10](docs/release/ladder/r10.jpg) |
+| r11 | The mirror pass: the wet road no longer reflects the city (sheen and sun streak stay) | 13,686 | 128 | 19 | 21,654 / 187,532 / 23,463 | [r11](docs/release/ladder/r11.jpg) |
+| r12 | Searchlights, beacon pillars, laser fans, aviation lights, plaza octahedra (the lights layer) | 12,836 | 850 | 17 | 169,329 / 39,851 / 74,206 | [r12](docs/release/ladder/r12.jpg) |
+| r13 | Sign panels, storefronts, equaliser facades, floor lines, roof slats, rings and dots, switching window runs | 12,572 | 264 | 17 | 134,494 / 217,916 / 308,517 | [r13](docs/release/ladder/r13.jpg) |
+| **r14** | **The lead and its echo, toms, the noise riser and swell** | **12,396** | **176** | 17 | 0 / 0 / 0 | as r13 |
 
-The pictures are contact sheets (skyline, street, tour) at 480x270 each. Rungs r01 to r05 and r14 draw
+Bytes and savings are from the rebuild of 2026-11-19 after T15 (before it: 17,146 at the top, 12,370
+at the bottom). The pictures are contact sheets (skyline, street, tour) at 480x270 each, from the
+first build of the ladder. Rungs r01 to r05 and r14 draw
 exactly the pixels of the rung above, because they cut the shell, the camera's input and the audio.
 
 **Checklist, rung 14** (the full-size pictures were opened and looked at):

@@ -29,6 +29,8 @@ npm run verify                 # the packed build draws the same pixels as the u
 npm run smoke                  # the packed file boots from file://, no errors, frame-time budget
 npm run typecheck              # tsc --noEmit on both projects (tsconfig.json: the product; tsconfig.tests.json: tests)
 npm run probe                  # the GL assumptions, proven on the GPU: instancing, block F, float targets, common.glsl
+npm run input                  # the camera listeners under real mouse and touch events: drag direction, finger flight
+npm run steady                 # car lights do not blink in step on the software rasteriser (coarse depth)
 npm test                       # vitest run
 npm run check                  # typecheck + tests + import boundaries + plans:check, whole repo
 npm run check:task -- T05      # the same gates, reported only for the paths that plan owns
@@ -259,6 +261,14 @@ In a `draw` or an update: no `new`, no closures, no array literals, no spread, `
   cannot show a `mediump` bug anyway [SC].
 - Fragment-only code (anything using `fwidth`, `dFdx`, `gl_FragCoord`, `discard`) goes inside
   `#ifdef FS`. Vertex-only code (`gl_VertexID`, `gl_InstanceID`) goes outside it or in `#ifndef FS`.
+- **Do not depth-test against a polygon that runs from the camera to the horizon.** The ground is one
+  quad 80 km wide; its interpolated depth is exact enough on this GPU and wrong on Chromium's
+  software rasteriser, where it cut every car light to a sliver in alternate frames [O: T15]. The
+  ground writes a constant `gl_FragDepth` behind the whole city instead, so nothing may be modelled
+  below y = 0: there is no longer anything to hide it.
+- **One GPU cannot rule out a precision defect.** Before calling a flicker unreproducible, render
+  the same frames with `shot.mjs --mode software`, and judge by counts or full-size crops: a contact
+  sheet scaled down for viewing shows flicker that is not there [O: T15].
 - Additive ribbons face the camera and are drawn with culling off (`state` has a mode for it); with
   culling on, about half vanish [SC].
 - ANGLE's performance warnings appear in the shader info log, and WebGL `INVALID_OPERATION`

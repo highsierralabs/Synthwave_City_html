@@ -7,7 +7,7 @@ owns: [package.json, package-lock.json, tsconfig.json, tsconfig.tests.json, vite
 reads: [architecture.md, Agents.md, tools/pack/index.mjs, tools/glslmin/index.mjs, src/plan.ts]
 budget: 2600
 executor: opus/high
-updated: 2026-11-18
+updated: 2026-11-19
 ---
 
 # T00: foundation
@@ -146,6 +146,11 @@ Every script writes only under `dist/`, `.tmp/` and `shots/`, all git-ignored an
   core measured.
 - Left for later tasks: `npm run smoke` on the product passes only once wave-2 layers draw something
   (today the product frame is black by design; see Outcomes).
+- [x] 2026-11-19 T15 (plans/T15-playtest-fixes.md), by the orchestrator: two gates added.
+  `npm run input` (`scripts/input.mjs`, page `dev/input/index.ts`) drives the camera's real pointer
+  listeners with mouse and touch events and checks the pose. `npm run steady` (`scripts/steady.mjs`)
+  renders six consecutive tour frames on Chromium's software rasteriser and fails when the car
+  lights blink in step. Neither is part of `npm run check`; both need a browser.
 
 ## 9. Surprises and discoveries
 
