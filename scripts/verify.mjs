@@ -8,7 +8,7 @@
 // pixel is compared. Any difference fails. A reference frame that is black fails too: comparing two
 // empty frames proves nothing.
 //
-//   node scripts/verify.mjs [--layers all,probe] [--no-rename] [--sabotage] [--keep] [--size 960x540]
+//   node scripts/verify.mjs [--layers all] [--no-rename] [--sabotage] [--keep] [--size 960x540]
 //
 // --sabotage breaks one shader rename on purpose (lib/bundle.mjs) to show the gate can fail.
 import { rmSync, writeFileSync } from 'node:fs';
@@ -19,7 +19,9 @@ import { fileUrl, launch, parseArgs, watchConsole } from './lib/browser.mjs';
 import { decodePng, diffImages, formatStats, imageStats } from './lib/png.mjs';
 
 const args = parseArgs(process.argv.slice(2));
-const layers = parseLayers(args.layers ?? 'all,probe');
+// Product layers only: the probe draws flat boxes at the same depth as the buildings and would
+// hide them from the comparison (T05).
+const layers = parseLayers(args.layers ?? 'all');
 const [width, height] = String(args.size ?? '960x540').split('x').map(Number);
 const VIEWS = [
   'view=high&t=5&q=2&mood=0',

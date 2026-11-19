@@ -32,9 +32,13 @@ export function stubFor(m, source) {
     return [
       `import { boot, run } from './engine';`,
       ...layers.map((l) => `import { init as ${l} } from './${l}/index';`),
-      `import { cameraInit } from './camera/index';`,
+      `import { cameraInit, cameraMode } from './camera/index';`,
+      `import { audioHidden, audioMute, audioStart, audioStation } from './audio/index';`,
       `const c = document.createElement('canvas'); document.body.append(c);`,
       `if (boot(c)) { ${layers.map((l) => `${l}();`).join(' ')} cameraInit(c); run(); }`,
+      // Keep every export the real shell calls alive, or stubbing main would also drop audio and the
+      // camera's mode switch from the bundle and charge them to the shell (seen in wave 2).
+      `addEventListener('keydown', (e) => { audioStart(); audioHidden(audioMute()); audioStation(); cameraMode(); void e; });`,
     ].join('\n');
   }
   const out = [];
