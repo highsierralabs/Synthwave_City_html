@@ -131,8 +131,10 @@ shape of the program, so that is where to spend the effort:
   logs, assertions and harness hooks.
 - Target is ES2022 with no down-levelling, so nothing needs a helper. Use what the language has.
 
-**In GLSL,** the minifier renames every identifier declared in project shaders with one map shared by
-all of them, strips comments and space, and shortens numbers. So:
+**In GLSL,** the minifier renames every identifier declared in project shaders, strips comments and
+space, and shortens numbers. Everything global (functions, globals, block members, varyings) shares
+one map across all shaders; locals and parameters are named per function, so every function reuses
+the same few short names [O: T14, 314 bytes]. So:
 
 - Write clear names and comments; they cost nothing.
 - Reserved names it will not touch: `F`, `T0`–`T7`, `X0`–`X3`, `FS`, `main` (§10.6). Use them only for
@@ -147,6 +149,8 @@ all of them, strips comments and space, and shortens numbers. So:
 - Top-level functions and `const` globals that no shader refers to are dropped from the packed
   build, so an unused helper in `common.glsl` costs nothing. That only works because every shader
   goes through one minify call: all GLSL lives in `.glsl` files, never in TypeScript strings.
+  Every `.glsl` under `src/` goes into that call even when nothing imports it, so delete a shader
+  you stop using: a stale file keeps the helpers it calls alive in the shipped build [O: T14].
 - A helper used by two shaders belongs in `common.glsl`; ask for it with a contract change request.
   Two private copies cost twice.
 - A literal used once is cheaper than a named `const`. A value used in many shaders belongs in
@@ -466,7 +470,8 @@ screenshot on the RTX says nothing about a phone, and "it renders" is not "it lo
 - Commit small and often with a plain message saying what changed; one commit per finished milestone
   or task is the norm. During a parallel wave only the orchestrator commits.
 - Commits use the repo-local identity already configured. No AI attribution or co-author trailers.
-- Not tracked: `node_modules/`, `dist/`, `shots/`, `.tmp/`.
+- Not tracked: `node_modules/`, `dist/`, `shots/`, `.tmp/`, `test-results/`. The product itself is
+  tracked as a copy in `docs/release/`.
 - Never rewrite history or delete a branch.
 
 ## Sources

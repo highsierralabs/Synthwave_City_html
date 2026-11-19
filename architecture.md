@@ -91,7 +91,7 @@ Runtime dependencies: **none**.
 | **TypeScript** | 6.0.3 | Type checking only (`tsc --noEmit`) |
 | **esbuild** | 0.28.2 | Strips types, bundles every module into one scope, serves the dev harness |
 | **terser** | 5.51.2 | Minifies with top-level mangling; the build tries several option sets and keeps the smallest packed result |
-| **glslmin** (in this repo, `tools/glslmin`) | n/a | Strips and renames GLSL across all shaders with one shared name map |
+| **glslmin** (in this repo, `tools/glslmin`) | n/a | Strips and renames GLSL across all shaders: one name map for everything global (functions, globals, block members, varyings), and locals named per function so every function reuses the same short names |
 | **pack** (in this repo, `tools/pack`) | n/a | Deflates and writes the self-extracting container (§3.3) |
 | **@gfx/zopfli** | 1.0.15 | Better deflate than zlib at the same format. Optional: the packer falls back to Node's zlib |
 | **Vitest** | 5.1.0 | Unit tests of pure logic and of the build tools |
@@ -110,7 +110,7 @@ in the parent project [SC]. Node is `>=24.14.1 <25`.
 | Plain JavaScript without types | Saves a build step that costs no bytes; loses the contract checks between parallel tasks |
 | A Latin-1 (`windows-1252`) binary container | 1.6% overhead, the smallest measured, but the file breaks on any host that sends `charset=utf-8` [O], which includes GitHub Pages [M] |
 | Base64 payload | Works everywhere, costs 33.5% [O] |
-| A context-mixing packer (Roadroller and its kind) | Likely 10 to 15% smaller than deflate [M], but unpacking is seconds of JavaScript on a phone for an input this size [I]. Left as a time-boxed experiment for T14 |
+| A context-mixing packer (Roadroller 2.1.0) | Measured [O: T14]: 14,978 bytes against 17,146, 12.6% smaller, but the first frame comes after 0.9 s on this desktop and 4.2 s with the CPU slowed four times, and the decoder allocates about 153 MB. Rejected for start-up time; the operator may decide otherwise |
 | Aliasing WebGL method names at run time (`gl[k[0]+k[6]]`) | Depends on property enumeration that differs between browsers [M]; deflate already makes repeated names cheap |
 | Rendering music to a buffer at start-up (tracker-style players) | A start-up stall and megabytes of samples on a phone; live scheduling starts at once |
 
@@ -122,7 +122,8 @@ those can grow the file.
 
 ### 3.1 Where the bytes go
 
-An estimate before anything is built [I]; §11.2 has the per-task budgets that add up to it.
+This was the estimate before anything was built [I]; §11.2 has the per-task budgets that add up to
+it. **The measured result is 17,146 bytes** (§3.5, `SIZE.md`).
 
 ```
 unpacker and container overhead      ~0.6 kB     measured [O]
@@ -192,8 +193,10 @@ the stream: **+582 bytes at a 22,396-byte stream**, +815 at 98,734. It runs in P
 - A server that sends **no `Content-Type` at all** makes Chromium show the file as text. Any
   `text/html` header works.
 - Rebuilding the number is quadratic in its length: 55 to 110 ms on this desktop at a 25 to 35 kB
-  stream, 315 ms at 60 kB. A phone is several times slower and has not been measured. A block
-  variant that decodes in linear time costs about 108 bytes more and is T14's to weigh.
+  stream, 315 ms at 60 kB. At the shipped size T14 measured the first frame at 108 ms, and at 303
+  and 466 ms with the CPU slowed four and six times; a throttled desktop is a stand-in for a phone,
+  not a phone. A block variant that decodes in linear time is built as the packer option `utf16l`
+  (+100 bytes, 302 ms at six times) and is not shipped.
 
 Not yet shown: Firefox, Safari and a real phone [I]. The packer writes `ascii` as a second output
 (`dist/synthwave-city.safe.html`) for anywhere `utf16` turns out not to work. The page title,
@@ -207,7 +210,9 @@ A consequence to know: the shipped file is not text. Editors show noise, and it 
 
 ```
 src/**/*.ts, src/**/*.glsl
-   |  esbuild: strip types, bundle to one scope; .glsl through glslmin; DEV code removed
+   |  esbuild: strip types, bundle to one scope (flat top-level code, no wrapper function and
+   |  no "use strict": the unpacker's indirect eval runs it in global scope); .glsl through
+   |  glslmin; DEV code removed
    v
 one JavaScript text
    |  terser: several option sets
@@ -246,6 +251,12 @@ screenshot per rung. The experience checklist that defines "still Synthwave City
 
 The smallest rung that still passes all seven is the answer to the question. Rungs above it are what
 the remaining bytes buy.
+
+**Result [O: T14, 2026-11-19].** The shipped file, with every feature, is **17,146 bytes**. The
+ladder has 15 rungs down to **12,370 bytes**, the smallest build that still passes the checklist as
+far as it can be judged on this machine: points 2 to 5 by eye, point 1 inferred from unchanged code,
+and points 6 and 7 by script only, because nobody has listened to it or opened it on a phone.
+`SIZE.md` has every rung with its cost and pictures.
 
 ## 4. System design
 
@@ -414,8 +425,8 @@ beacons, searchlights and billboards pick their spots by scanning `boxes` and `m
 
 Skyline: a low-frequency height field with a few downtown peaks sets each cell's district. Typical
 roof heights are 12 to 50 m in `low`, 50 to 160 m in `mid`, 150 to 400 m in `high`, and 500 to 800 m
-for the megatowers, which reach up to about 930 m with spire. Measured for the shipped seed [O: T03]:
-1,024 cells (391 low, 396 mid, 192 high, 38 plaza, 7 mega), 3,904 boxes, and seven megatowers of 591
+for the megatowers, which reach up to about 930 m with spire. Measured for the shipped seed after the art pass moved the district mix toward towers [O: T13]:
+1,024 cells (292 low, 394 mid, 293 high, 38 plaza, 7 mega), 3,764 boxes, and seven megatowers of 591
 to 868 m.
 
 ## 6. Look
@@ -640,7 +651,7 @@ T14 decide.
 | What | Budget |
 |---|---|
 | Frame time, quality 2, 2560x1440, reference GPU (RTX 4070 SUPER) | 95th percentile of frame intervals under 18 ms on the tour (a frame that keeps up on a 60 Hz display measures about 16.7 ms, so 16.6 could never pass there; headless Chromium here ticks every 8 ms [O]) |
-| Draw calls | 30 |
+| Draw calls | 30. Measured [O: T14]: 34 at quality 2 (11 post, 10 mirror pass, 13 main pass) and 23 at quality 0. Accepted: merging draws would cost bytes, and no frame was missed |
 | Per-frame allocation | none |
 | Time from open to first frame, desktop | 1 s |
 
@@ -661,7 +672,7 @@ T14 decide.
 | Unit | `npm test` | plan determinism and invariants; contract parity between TypeScript and GLSL; container round trips; minifier behaviour |
 | Boundaries and ownership | `npm run check`, `npm run plans:check` | §4.2; no path owned by two plans |
 | Screenshots | `node scripts/shot.mjs` | what a layer or the whole city looks like at a fixed camera and time; the author must open the image and look |
-| Pixel identity | `npm run verify` | the packed file draws the same frames as the unminified sources, so the minifiers and the container changed nothing |
+| Pixel identity | `npm run verify` | the full pipeline (shader minifier, terser, container) applied to a harness with every product layer and post draws the same frames as the unminified sources. The app shell, audio and camera are not in that comparison; `smoke` covers the shipped file |
 | Smoke | `npm run smoke` | the packed file boots from `file://`, reports no errors, draws a non-empty frame and holds a frame-time budget |
 | Size | `npm run size` | the gate, and each module's marginal cost |
 
@@ -721,7 +732,8 @@ wave 3:  T13, then T14               alone
 | Risk | Mitigation |
 |---|---|
 | The `utf16` container is shown only in the Chromium family (four builds [O]) | The spec says the byte order mark wins [W: w3c-bom]; `ascii` ships beside it; the operator's phone is the real test |
-| Unpacking is quadratic and unmeasured on a phone | 55 to 110 ms on the desktop at the expected size; a linear variant exists for about 108 bytes (T14) |
+| Unpacking is quadratic and unmeasured on a phone | First frame at 466 ms with the CPU slowed six times [O: T14]; the linear container `utf16l` is one build option away for 100 bytes |
+| The packed program is flat global code (22 bytes saved): about 143 short names live on the global scope | No collision with Chromium's window properties [O]; Firefox and Safari unchecked. Reverting commit `2350ace` undoes it |
 | A file manager or a chat app re-encodes or previews the file as text | README says to send it as a file; the `ascii` variant is the fallback |
 | The shader minifier renames something it should not | `npm run verify` compares pixels; the build can fall back to strip-only minifying with one flag |
 | A phone lacks float colour targets | 8-bit fallback (§6.6); stated as untested |
