@@ -115,7 +115,7 @@ function leg(px: number, pz: number, d: number, dist: number): void {
   if (dist > 40) {
     for (let t = -1; t < 2; t++) {
       const n = d + t + 4 & 3;
-      const s = (dx(n) * mx + dz(n) * mz) / m * 2 + +((t ? hOut : hIn) > ST_HALF) * 2 + +!t * .5 + hash(legs * 3 + t + 1) * 1.6;
+      const s = (dx(n) * mx + dz(n) * mz) / m * 2 + +((t ? hOut : hIn) > ST_HALF) * 3 + +!t * .5 + hash(legs * 3 + t + 1) * 1.6;
       if (s > best) best = s, turn = t;
     }
   }
@@ -227,8 +227,8 @@ function step(): void {
   at(along + v * .7);
   const was = vYaw;
   vYaw += clamp((qyaw - vYaw) * 3, 1.3) * dt;
-  vRoll += ((IN[I_CALM] ? 0 : clamp((vYaw - was) / dt * .35, .4)) - vRoll) * dt * 3;
-  vPitch += (.06 - .5 * smooth(10, 300, y) + Math.atan2(vy, v) * .4 - vPitch) * dt * 2;
+  vRoll += ((IN[I_CALM] ? 0 : clamp((vYaw - was) / dt * .25, .25)) - vRoll) * dt * 3;
+  vPitch += (.06 - .3 * smooth(10, 300, y) + Math.atan2(vy, v) * .4 - vPitch) * dt * 2;
   at(along);
   bx -= bx * dt;
   bz -= bz * dt;

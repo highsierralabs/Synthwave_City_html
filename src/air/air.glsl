@@ -61,7 +61,7 @@ void main() {
   // Bob a little; cosmetic, so uTime.x is fine.
   anchor.y += sin(uTime.x * (0.5 + r.x) + r.y * TAU);
   float len = mix(3.0 + 2.0 * q.x, 26.0 + 8.0 * q.x, ship), wid = len * mix(0.4, 0.3, ship), tall = len * 0.3;
-  vCol = vec4(pal(q.y * 6.0), 1.0);
+  vCol = vec4(pal(hash(float(stream * 2 + k % 2 + 7000)) * 6.0), 1.0);
   vN.w = ship;
   vSize = vec2(len, tall);
 
@@ -82,7 +82,7 @@ void main() {
   } else if (part == 7) {
     // Trail: from the tail back, 1.5 s of flight long (plus two hull lengths); L2 at its head.
     float w = max(wid * 0.35, 2.0 * px);
-    p = ribbon(place(anchor, tail), place(anchor, tail - h * (laps * 1.5 + len * 2.0)), w, uv);
+    p = ribbon(place(anchor, tail), place(anchor, tail - h * (laps * 0.5 + len * 2.0)), w, uv);
     vLoc = vec3(uv.x, 0.0, uv.y);
     vCol.rgb *= 3.5 * sqrt(wid * 0.35 / w);
   } else {

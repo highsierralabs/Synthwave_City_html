@@ -62,9 +62,9 @@ void main() {
   float far = smoothstep(0.03, 0.15, max(ga.x, ga.y) / CELL);
   vec3 v = normalize(vPos - vec3(0.0, uCam.y, 0.0));
   // wet: puddles on the asphalt, damp sidewalks; stronger at grazing angles
-  float wet = mix((car * 0.5 + walk * 0.15) * (0.3 + 0.9 * noise(w * 0.11)), 0.1, far)
+  float wet = mix((car * 0.3 + walk * 0.1) * (0.2 + 1.0 * noise(w * 0.11)), 0.1, far)
     * (0.25 + 0.75 * pow(clamp(1.0 + v.y, 0.0, 1.0), 4.0));
-  vec2 uv = gl_FragCoord.xy / uRes.xy + (vec2(noise(w * 0.5), noise(w.yx * 0.5 + 37.0)) - 0.5) * 0.008 * max(0.0, 1.0 - max(ga.x, ga.y));
+  vec2 uv = gl_FragCoord.xy / uRes.xy + (vec2(noise(w * 0.5), noise(w.yx * 0.5 + 37.0)) - 0.5) * vec2(0.006, 0.03) * max(0.0, 1.0 - max(ga.x, ga.y));
   c = mix(c + e, vec3(0.035, 0.02, 0.05) + pal(0.0) * 0.02, far)
     + wet * (texture(T1, uv).rgb + step(uRes.z, 0.5) * (fogColor(v) * 0.6
       + pal(3.0) * 3.0 * pow(clamp(dot(normalize(v.xz + 1e-5), normalize(uSun.xz)), 0.0, 1.0), 400.0)));

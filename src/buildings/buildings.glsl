@@ -37,7 +37,7 @@ void main() {
   // face's width; f numbers the face, so the four sides differ.
   float u = dot(vL.xz + vB.xz, abs(vN.zx)), w = dot(vB.xz, abs(vN.zx)), f = 64.0 * (vN.x + 2.0 * vN.z + 3.0) + 320.0 * vA.w;
   vec2 c = vec2(u / (2.0 + 2.0 * h.z), y / (3.2 + 0.6 * g.y));
-  float win = (1.0 - grid(c.x, 0.1)) * (1.0 - grid(c.y, 0.08 + 0.2 * fract(h.y * 7.0)));
+  float win = (1.0 - grid(c.x, 0.2)) * (1.0 - grid(c.y, 0.14 + 0.16 * fract(h.y * 7.0)));
   float far = smoothstep(0.2, 0.5, max(fwidth(c.x), fwidth(c.y)));
   vec2 id = floor(c);
   // Windows are lit in runs of three; colour and brightness vary per window.

@@ -15,7 +15,7 @@ void main() {
   vec3 r = ray(), f = fogColor(r);
   float y = r.y, az = atan(r.x, -r.z), h = max(y, 0.0);
   // gradient: haze band at the horizon, the mood's sky colour, deep indigo overhead
-  vec3 c = mix(f * 1.7 + pal(0.0) * 0.05,
+  vec3 c = mix(f * 2.4 + pal(0.0) * 0.05,
     mood(vec3(0.16, 0.012, 0.14), vec3(0.02, 0.015, 0.09), vec3(0.09, 0.03, 0.2)), smoothstep(0.0, 0.2, h));
   c = mix(c, mood(vec3(0.03, 0.005, 0.07), vec3(0.004, 0.003, 0.02), vec3(0.02, 0.01, 0.08)), smoothstep(0.08, 0.6, h));
 

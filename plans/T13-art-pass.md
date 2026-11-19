@@ -1,7 +1,7 @@
 ---
 id: T13-art-pass
 title: Balance the picture
-status: ready
+status: in-progress
 depends_on: [T00, T01, T02, T03, T04, T05, T06, T07, T08, T09, T10, T11, T12]
 owns: [docs/screenshots/**, plans/T13-art-pass.md]
 reads: [architecture.md, Agents.md, src/**, plans/**]
@@ -200,7 +200,73 @@ Every change is a number in a tracked file; `git diff` shows them all and `git c
 
 ## 8. Progress
 
+- [x] 2026-11-18 M1 survey. Thirteen fixed views (`.tmp/T13/survey.sh`: street, canyon, ave100,
+  sun300, away300, h600, h1500, top, mega, junction, plaza, edge, megafar) at q2 in moods 0, 1, 2 and
+  at q0 and q1 in mood 0, 1280x720, t = 10; a 120 s tour at one frame a second (960x540); the high
+  view at 915x412 and 412x915, q0. Pictures in `shots/T13/m1-*`, `shots/T13/tour0/`, contact sheets
+  `shots/T13/sheet-*.png`. Baseline file 17,522 bytes. What is wrong, worst first (observed):
+  1. **Air traffic fills the sky.** In ave100, sun300, plaza and edge the band from the horizon to
+     well above it is dozens of horizontal streaks, every craft a different palette colour, in front
+     of the skyline and the sun. Each streak is a 45 to 135 m trail at L2. The plaza view is the worst:
+     the trails are most of what is in the sky.
+  2. **Mid-distance facades wash out.** From 300 to 600 m (sun300, h600, edge) everything past about
+     400 m is pink-grey boxes with neon outlines: windows have faded to their dim average and the
+     sunset fog lifts them to the sky's colour. The reference's mid-distance towers keep coloured
+     window texture and read against the sky; ours read as a wireframe. Mood 1 (midnight) holds up
+     best because its fog is dark.
+  3. **Near facades are walls of big saturated windows.** The tour spends much of its time low in
+     street canyons (tour0 frames 30, 60-65, 85-95, 110-119) where the frame is two facades of
+     2-4 m windows covering about 80% of the wall, almost all lit in full palette colours. The
+     reference's facades are darker with smaller lit windows.
+  4. **The road is a mirror at street level** (street, canyon): reflections of facades are crisp and
+     strong; the reference's road is wet, with smeared, dimmer reflections.
+  5. **Quality 0 looks empty** (q0 h600, h1500, phone 915x412): past about 900 m there is only fogged
+     ground grid, and the density of 0.4 leaves gaps; the 600 m view is mostly ground.
+  6. **Sun stripes** are soft but legible at 1280x720; the stars are points at 1280x720 and at
+     915x412 (not the streaks the orchestrator saw, at least in these stills).
+  7. Draw calls: the harness reports 34 per frame against the 30 of section 11.3 (not a picture
+     fault; noted for T14).
+
+- [x] 2026-11-18 M2 light balance, first pass: c01 to c14 below (seven kept, seven tried and
+  reverted). Air traffic, near facades and the wet road are better; the mid-distance wash and the
+  sun stripes are not (see Surprises). The tour changes c10 to c12 belong to M4 but were made here
+  because the survey's tour was where the facade problem showed. `npm run check` OK (109 tests),
+  `npm run verify` OK (4 views, 0 differing pixels), `npm run smoke` OK (1920x1080, p95 8.1 ms on
+  the headless 8 ms clock). File 17,522 bytes. Committed.
+
+### Change log
+
+Every change, in the order made. "Kept" changes are in the tree; "reverted" ones were tried, looked
+at and undone. Before/after pictures are `shots/T13/<id>/` against the previous id (the survey views
+named), with side-by-side sheets `shots/T13/sheet-<id>*.png`. Bytes are the `npm run build` size of
+`dist/synthwave-city.html` after the change. Exceptions to the folder naming: c10 to c12 are judged
+on the tour sequences `shots/T13/tour0` to `tour3` (one folder per change, 120 frames at 1 s);
+c13's before and after are `shots/T13/c11*` and `c12*`; c14's are `c12` to `c16`.
+
+| Id | File | Old | New | Why, and what the pictures showed | Bytes |
+|---|---|---|---|---|---|
+| c01 | `src/air/air.glsl` (trail length) | `laps * 1.5 + len * 2.0` | `laps * 0.5 + len * 2.0` | Trails were 1.5 s of flight (45 to 135 m) and crossed the sky as long streaks. At 0.5 s the sky reads as craft with tails (plaza, sun300, edge). Kept. | 17,522 |
+| c02 | `src/air/air.glsl` (craft colour) | `pal(q.y * 6.0)`, a colour per craft | `pal(hash(float(stream * 2 + k % 2 + 7000)) * 6.0)`, a colour per sub-lane | Every craft was a different colour, so no lane read as a stream. Now each sub-lane is one colour: rows of green, rows of magenta (plaza). Kept. | 17,522 |
+| c03 | `src/buildings/buildings.glsl` (far facade average) | `0.06 * lit * (cA + cB)` | `0.12 * lit * (cA + cB)` | Tried to lift mid-distance facades. The average of two opposed hues is grey, so the far city got greyer, not more colourful (sun300, h600). Reverted. | n/a |
+| c04 | same | `0.06 * lit * (cA + cB)` | `0.12 * lit * cA` | One hue instead of the grey mix. Barely visible change, slightly more tint. Reverted with c03. | n/a |
+| c05 | `src/common.glsl` `fogColor` warm, and `src/backdrop/sky.glsl` horizon | warm sunset `(0.36, 0.08, 0.18)`, miami `(0.34, 0.10, 0.30)`; sky haze `f * 1.7` | `(0.22, 0.05, 0.11)`, `(0.21, 0.06, 0.19)`; `f * 2.4` | Darker fog towards the sun with the horizon haze kept about as bright, so the fogged far ground is darker than the sky above the ridge, as in the reference. Small but visible at h1500 (more contrast in the city, darker ring beyond it); sun300 almost unchanged. Kept. | 17,530 |
+| c06 | `src/buildings/buildings.glsl` (window fade) | `smoothstep(0.2, 0.5, ...)` in `grid()` and `far` | `smoothstep(0.3, 0.7, ...)` | Keeps windows to about 1.4 px. A few more facades show window texture at 400-600 m (megafar crop), with visible moire and a shimmer risk against the two-pixel rule of Agents.md, for little change in the overall read. Reverted. | n/a |
+| c07 | `src/buildings/buildings.glsl` (window size) | `grid(c.x, 0.1)`, `grid(c.y, 0.08 + 0.2 * fract(h.y * 7.0))` | `grid(c.x, 0.2)`, `grid(c.y, 0.14 + 0.16 * fract(h.y * 7.0))` | Windows covered about 80% of a wall; now about 45 to 60%, with real frames between them. Near facades read as buildings with windows rather than walls of coloured tiles (street, canyon, junction). Also brings the near average closer to the far average, which T05 had set at about half of it. Kept. | 17,530 |
+| c08 | `src/backdrop/ground.glsl` (wet strength) | `(car * 0.5 + walk * 0.15) * (0.3 + 0.9 * noise(...))` | `(car * 0.3 + walk * 0.1) * (0.2 + 1.0 * noise(...))` | The road was a mirror at street level. Reflections are now about 60% as strong and patchier: the street reads wet, the facades' reflections no longer compete with the facades (street, canyon). Kept. | 17,530 |
+| c09 | `src/backdrop/ground.glsl` (reflection ripple) | uv offset `* 0.008` | `* vec2(0.006, 0.03)` | Ripple stretched vertically, the way wet asphalt smears lights into streaks. Reflection edges break up more and read less like glass (crops in `sheet-c09.png`). A mild change. Kept. | 17,530 |
+| c10 | `src/camera/tour.ts` (avenue preference) | `> ST_HALF) * 2` | `> ST_HALF) * 3` | T11's suggestion. Over an hour (`.tmp/T13/tourstat.ts`, seed 1984): time on avenues 77.4% to 98.4%, time in a street canyon (below the roofs on both sides of a 20 m street) 7.3% to 0.6%; altitude mix and megatower passes about the same. The 36 m avenues show more of the city than the 20 m streets, which were mostly two walls. Kept; a judgement call. | 17,530 |
+| c11 | `src/camera/tour.ts` (pitch at altitude) | `.06 - .5 * smooth(10, 300, y)` | `.06 - .3 * smooth(10, 300, y)` | Above 200 m the drone looked 25 degrees down at roofs and lost the horizon (tour1 frames 70-80). Now about 14 degrees at 300 m: the skyline and the ridge stay in frame (tour2 frame 70). Kept. | 17,530 |
+| c12 | `src/camera/tour.ts` (bank) | `clamp(turn rate * .35, .4)` | `clamp(turn rate * .25, .25)` | Bank reached 0.37 rad (21 degrees) in a junction turn (tour2 frames 60, 65), tilting the whole city. Now 0.23 at the same moment (tour3). Kept. | 17,522 |
+| c13 | `src/engine.ts` (fog density) | `1.2 / R1` | `1.6 / R1` | Tried to hide the empty ground past the far fade at q0. No visible difference at q0 or q2 (`sheet-c12.png`): from altitude the height-weighted fog is thin whatever the ground density. Reverted. | n/a |
+| c14 | `src/backdrop/sky.glsl` (sun) | disc `* 5.0`; halo `0.5`, `0.6`; stripe gap `clamp(0.25 - v * 0.35, ...)` | tried disc 3.0 and 2.5, halo 0.25 and 0.3, gap `clamp(0.3 - v * 0.5, ...)` | To make the stripes crisper. None of the four tries made a visible difference at 1280x720 (`sheet-c13.png` to `sheet-c16.png`): the gaps are 3 to 12 px without post (`diag/sun-post0.png`), and what fills them under post is the horizon haze, not the disc's bloom. Reverted. | n/a |
+
 ## 9. Surprises and discoveries
+
+- 2026-11-18. The pink-grey mid-distance city is not mainly fog. With only the backdrop, buildings
+  and post (`shots/T13/diag/bb.png`), facades past 400 m already read mauve-grey: their faded average
+  is dim (about 0.05 linear), the gamma lifts that to about a quarter of full scale, and the fog adds
+  its pink. Darkening the fog (c05) changed little; brightening the average (c03) made it greyer,
+  because the two window colours of a building are often opposite hues.
 
 ## 10. Decision log
 

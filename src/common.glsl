@@ -92,7 +92,7 @@ vec3 mood(vec3 a, vec3 b, vec3 c) {
 // Colour of the fog in a view direction: warm towards the sun, violet away from it.
 vec3 fogColor(vec3 dir) {
   float s = clamp(dot(normalize(dir.xz + 1e-5), uSun.xz) * 0.5 + 0.5, 0.0, 1.0);
-  vec3 warm = mood(vec3(0.36, 0.08, 0.18), vec3(0.05, 0.06, 0.20), vec3(0.34, 0.10, 0.30));
+  vec3 warm = mood(vec3(0.22, 0.05, 0.11), vec3(0.05, 0.06, 0.20), vec3(0.21, 0.06, 0.19));
   vec3 cool = mood(vec3(0.07, 0.03, 0.17), vec3(0.02, 0.02, 0.09), vec3(0.04, 0.09, 0.20));
   return mix(cool, warm, s * s);
 }
