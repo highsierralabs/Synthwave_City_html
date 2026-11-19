@@ -234,6 +234,26 @@ Every change is a number in a tracked file; `git diff` shows them all and `git c
   `npm run verify` OK (4 views, 0 differing pixels), `npm run smoke` OK (1920x1080, p95 8.1 ms on
   the headless 8 ms clock). File 17,522 bytes. Committed.
 
+- [x] 2026-11-18 M3 distance and repetition. High views at 900 and 1500 m at q0 and q2
+  (`shots/T13/m3/`). No tile repeat is visible (R1 is under half the tile). What shows from high up is
+  the empty fogged plain past the far fade, worst at q0 (fade 900 to 1300 m), and from 1500 m a dim
+  reflected sun in that plain (c15, reverted). The fade radii and the q0 density are contract numbers
+  (`src/contracts.ts`), so they are left alone; the fog density lever (c13) did nothing visible. The
+  tour never goes above about 400 m, so these views are free-flight only.
+- [x] 2026-11-18 M4 motion. Frame sequences: flying forward at 60 m/s over the city (`shots/T13/mot/fly_*`,
+  1/30 s apart), air traffic from the plaza (`mot/air_*`), one beat (`beat0`, `beat1`). No shimmer or
+  crawling seen in consecutive frames of facades, roads or trails; craft move steadily. Beat pulse
+  strengthened (c16). Tour pacing: c10 to c12. Traffic speeds and flicker rates were looked at in the
+  sequences and left as they are.
+- [x] 2026-11-18 M5 quality 0 at 915x412 and 412x915 (`shots/T13/m5/`): readable in both
+  orientations, sun, ridge, avenue traffic and buildings all legible; the city was sparse, so c17
+  draws more buildings at q0. Frame time on this desktop, idle, headless Chromium 151, RTX 4070
+  SUPER, `npm run smoke` on the packed file with the tour driving: 1920x1080, 10 s, 1,269 frames,
+  rAF intervals median 8.0 ms, p95 8.1, p99 8.1, worst 8.1; 2560x1440, 10 s, 1,271 frames, median
+  8.0, p95 8.1, p99 8.1, worst 8.2; no frame over 50 ms. Headless Chromium here ticks rAF every 8 ms,
+  so this shows only that no frame missed that clock at either size; it is not a GPU time and says
+  nothing about a phone.
+
 ### Change log
 
 Every change, in the order made. "Kept" changes are in the tree; "reverted" ones were tried, looked
@@ -259,6 +279,9 @@ c13's before and after are `shots/T13/c11*` and `c12*`; c14's are `c12` to `c16`
 | c12 | `src/camera/tour.ts` (bank) | `clamp(turn rate * .35, .4)` | `clamp(turn rate * .25, .25)` | Bank reached 0.37 rad (21 degrees) in a junction turn (tour2 frames 60, 65), tilting the whole city. Now 0.23 at the same moment (tour3). Kept. | 17,522 |
 | c13 | `src/engine.ts` (fog density) | `1.2 / R1` | `1.6 / R1` | Tried to hide the empty ground past the far fade at q0. No visible difference at q0 or q2 (`sheet-c12.png`): from altitude the height-weighted fog is thin whatever the ground density. Reverted. | n/a |
 | c14 | `src/backdrop/sky.glsl` (sun) | disc `* 5.0`; halo `0.5`, `0.6`; stripe gap `clamp(0.25 - v * 0.35, ...)` | tried disc 3.0 and 2.5, halo 0.25 and 0.3, gap `clamp(0.3 - v * 0.5, ...)` | To make the stripes crisper. None of the four tries made a visible difference at 1280x720 (`sheet-c13.png` to `sheet-c16.png`): the gaps are 3 to 12 px without post (`diag/sun-post0.png`), and what fills them under post is the horizon haze, not the disc's bloom. Reverted. | n/a |
+| c15 | `src/backdrop/ground.glsl` (far reflection) | far `wet` average `0.1` | `0.05` | From 1500 m a second, dim sun shows in the fogged plain below the ridge: the mirror pass's sky in the far wet average. Halving it only dimmed the ghost a little (`shots/T13/m3/h1500flat-q2*.png`) and dulled the far avenues at 300 m (`sheet-c15m3.png`). Reverted; left as an observation. | n/a |
+| c16 | `src/lights/beam.glsl`, `src/lights/holo.glsl` (beat pulse) | `(0.8 + 0.4 * uTime.w)` | `(0.6 + 0.8 * uTime.w)` | The city's pulse was the beams and billboards moving by +/-20%, which a sequence across one beat (`shots/T13/beat0`, frame mean 81.9 to 81.0) barely showed. At 0.6 to 1.4 the beams visibly flare on the beat and settle (`beat1`, `sheet-beat1.png`); the decay shape is unchanged, so it reads as a pulse, not a strobe. Kept. | 17,530 |
+| c17 | `src/buildings/index.ts` (drawn prefix) | `boxCount * density` | `boxCount * (density * .6 + .4)` | At quality 0 (density 0.4) many blocks were empty lots and the 600 m and avenue views were mostly ground (`shots/T13/m5/*-915x412.png`). Buildings now draw 64% at q0, 82% at q1, 100% at q2; streets, air and lights keep the shared density. The q0 views fill in (`sheet-c16.png` in `shots/T13/m5/`). Costs vertex work on a phone that nobody has measured. Kept; a judgement call. | 17,538 |
 
 ## 9. Surprises and discoveries
 

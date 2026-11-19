@@ -15,7 +15,7 @@ export function init(): void {
   addLayer(O_BUILD, () => {
     // The density prefix (section 11.1), extended to the end of its last building, whose boxes are
     // contiguous, so no building is ever drawn cut in half.
-    let n = boxCount * F[U_RES + 3]! | 0;
+    let n = boxCount * (F[U_RES + 3]! * .6 + .4) | 0;
     while (boxes[n * BOX + B_SEED] == boxes[n * BOX - BOX + B_SEED]) n++;
     gl.useProgram(p);
     state(OPAQUE);

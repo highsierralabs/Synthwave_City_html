@@ -98,7 +98,7 @@ void main() {
     vPos = sprite(a, ww, vUv);
   }
   // beams fade out across the far fade instead of lying down with their anchor
-  vCol = vec4(col * (0.8 + 0.4 * uTime.w) * (1.0 - smoothstep(uFade.x, uFade.y, length(a.xz - from.xz))), fall);
+  vCol = vec4(col * (0.6 + 0.8 * uTime.w) * (1.0 - smoothstep(uFade.x, uFade.y, length(a.xz - from.xz))), fall);
   gl_Position = on > 0.0 ? uVP * vec4(vPos, 1.0) : vec4(0.0);
 }
 #endif

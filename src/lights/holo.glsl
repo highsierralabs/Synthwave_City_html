@@ -38,7 +38,7 @@ void main() {
   float scan = mix(0.6 + 0.4 * cos(p.y * 50.0 - uTime.x * 4.0), 0.6, smoothstep(0.02, 0.05, fw));
   float flick = hash(vec2(floor(uTime.x * 14.0), vB.x)) < 0.04 ? 0.3 : 1.0;
   vec3 col = a * txt * 2.8 + a * frame * 2.2 + c * (bar * 1.6 + 0.16 + 0.1 * p.y / vA.w + 0.15 * step(edge, 0.25));
-  O = vec4(col * scan * flick * (0.8 + 0.4 * uTime.w) * step(0.0, edge) * (1.0 - fogAmount(vPos)), 1.0);
+  O = vec4(col * scan * flick * (0.6 + 0.8 * uTime.w) * step(0.0, edge) * (1.0 - fogAmount(vPos)), 1.0);
 }
 #else
 layout(location = 0) in vec4 aA; // centre x, base y, centre z, seed
