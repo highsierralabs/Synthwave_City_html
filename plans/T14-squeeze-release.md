@@ -1,7 +1,7 @@
 ---
 id: T14-squeeze-release
 title: Ledger, cut ladder and release
-status: draft
+status: ready
 depends_on: [T13]
 owns: [SIZE.md, README.md, LICENSE, docs/release/**, plans/T14-squeeze-release.md]
 reads: [architecture.md, Agents.md, src/**, tools/**, scripts/**, plans/**]
@@ -22,7 +22,7 @@ checklist of §3.5.
 
 ## 2. Context and orientation
 
-This plan is `draft` until T13 is done; the orchestrator revises it then and sets it `ready`.
+Revised by the orchestrator on 2026-11-18 after T13; see "State after T13" below.
 
 It runs alone and may edit any path to save bytes, provided the picture does not change
 (`npm run verify` compares pixels; for changes that legitimately alter pixels, before and after shots
@@ -31,6 +31,47 @@ are reverted and logged too: a negative result is a result.
 
 `npm run size` gives marginal costs per module (§3.5). Finer attribution, per feature inside a
 module, is made by deleting the feature in a scratch copy or behind a build-time flag and rebuilding.
+
+
+### State after T13 (orchestrator, 2026-11-18)
+
+The full build is **17,538 bytes** (`dist/synthwave-city.html`, utf16; the ascii twin is about 22.8
+kB), with every optional item of every plan in it. `npm run check` (109 tests), `npm run verify`
+(0 differing pixels in four views) and `npm run smoke` pass. That is already 47% under the gate, so
+this task is not a rescue: it is the measurement. The ladder starts at 17.5 kB and goes down.
+
+Marginal costs today (`npm run size`): core 3,824, container 518, plan 1,244, backdrop 1,508,
+buildings 1,012, street 1,228, air 850, lights 2,046, post 602, audio 1,604, camera 2,134, main
+1,588. Every plan's Outcomes lists what its author thought could be cut, mostly as estimates; your
+job is to replace those estimates with measurements.
+
+Things to settle here, beyond the plan below:
+
+1. **The unpacker is quadratic** (T01, decision 6): 55 to 110 ms on this desktop at 25 to 35 kB, and
+   unmeasured on a phone. Measure time from navigation to first frame for the shipped file at 1x, 4x
+   and 6x CPU throttling (Chromium's `Emulation.setCPUThrottlingRate` through Playwright's CDP
+   session), and the same for T01's linear block variant (about 108 bytes more; described in
+   `plans/T01-packer.md`, not built). Ship whichever the numbers justify, and say which and why. A
+   throttled desktop is a stand-in, not a phone; say so.
+2. **Draw calls** are 34 per frame at quality 2 against a budget of 30 (§11.3). Either merge draws
+   where that also saves bytes, or state the measured number and why it is acceptable.
+3. **After a context loss the engine's frame loop keeps running** on a dead context (T12's note).
+   Fix it if it costs a few bytes; otherwise record it.
+4. **`docs/screenshots/*.png` are 1.5 to 1.8 MB each** (8 MB for five) because of film grain. They
+   are T13's, kept as they are unless you can make them much smaller without losing the look
+   (smaller size, or shot with a flag that leaves the grain out); the README must not pull in megabytes
+   for a 17 kB product. Your call; say what you did.
+5. **Documentation drift:** `architecture.md` and `Agents.md` belong to the orchestrator. Report every
+   line that is no longer true (T13 already found §5.5's plan numbers) and the orchestrator applies
+   them after you finish.
+
+The ladder needs builds without a feature. Do not leave feature flags in the shipped sources: use
+scratch copies under `.tmp/T14/` or a build-time define that the minifier removes, so the full build
+stays byte-for-byte what it would be without the experiment.
+
+You run alone, so **you commit your own work**: one commit per squeeze step or milestone, plain
+messages saying what changed and what it saved, using the repository's configured identity, with no
+co-author or AI attribution trailer of any kind. Never push, never add a remote.
 
 ## 3. Scope
 
