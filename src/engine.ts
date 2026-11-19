@@ -142,6 +142,8 @@ export function run(): void {
 }
 
 function loop(ts: number): void {
+  // After a context loss the loop stops for good: the app reloads the page on restore (section 12).
+  if (gl.isContextLost()) return;
   requestAnimationFrame(loop);
   const ms = ts - last;
   last = ts;
