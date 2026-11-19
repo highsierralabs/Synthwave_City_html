@@ -1,9 +1,9 @@
 ---
 id: T00-foundation
 title: Toolchain, contracts, GL helper, engine, harness and gates
-status: ready
+status: done
 depends_on: []
-owns: [package.json, package-lock.json, tsconfig.json, vitest.config.mjs, .gitignore, .gitattributes, CLAUDE.md, src/contracts.ts, src/common.glsl, src/gl.ts, src/engine.ts, src/glsl.d.ts, dev/**, scripts/**, tests/contracts/**, plans/README.md, plans/T00-foundation.md]
+owns: [package.json, package-lock.json, tsconfig.json, tsconfig.tests.json, vitest.config.mjs, .gitignore, .gitattributes, CLAUDE.md, src/contracts.ts, src/common.glsl, src/gl.ts, src/engine.ts, src/engine.glsl, src/glsl.d.ts, dev/**, scripts/**, tests/contracts/**, plans/README.md, plans/T00-foundation.md]
 reads: [architecture.md, Agents.md, tools/pack/index.mjs, tools/glslmin/index.mjs, src/plan.ts]
 budget: 2600
 executor: opus/high
@@ -130,11 +130,165 @@ Every script writes only under `dist/`, `.tmp/` and `shots/`, all git-ignored an
 ## 8. Progress
 
 - [x] 2026-11-18 Scaffold by the orchestrator: packages installed, contracts drafted, stubs in place.
+- [x] 2026-11-18 Started by the T00 executor (opus/high): read Agents.md, architecture.md, this plan.
+- [x] 2026-11-18 M1: `src/gl.ts` written; `dev/gltest/` (probe page and seven test shaders) and
+  `scripts/probe.mjs`. First run failed every program on a `common.glsl` bug (below); fixed; all items
+  pass, also with every shader through T02's minifier (`--minified`).
+- [x] 2026-11-18 M2: `src/engine.ts` and `src/engine.glsl` (the default blit) written.
+- [x] 2026-11-18 M3: `dev/harness.ts`, `dev/probe/` (boxes, roof glows, ground, sky), `scripts/shot.mjs`,
+  `scripts/dev.mjs`, `scripts/lib/{browser,bundle,png}.mjs`. Probe shots and the 5 km flight taken
+  and looked at.
+- [x] 2026-11-18 M4: `scripts/build.mjs`; product build reproducible; works with T01's real packer
+  and T02's real minifier, which landed during this task.
+- [x] 2026-11-18 M5: `verify`, `smoke`, `size`, `check`, `check-task`, `plans-check`,
+  `scripts/lib/{plans,imports}.mjs`, `tests/contracts/`. tsconfig split into product and tests.
+- [x] 2026-11-18 M6: every export of `gl.ts` and `engine.ts` documented (what, cost, example line);
+  core measured.
+- Left for later tasks: `npm run smoke` on the product passes only once wave-2 layers draw something
+  (today the product frame is black by design; see Outcomes).
 
 ## 9. Surprises and discoveries
 
+- **`place()` in the draft `common.glsl` did not compile:** it read `d.z` from a `vec2`, so every
+  program failed (`ERROR: 0:151: 'z' : vector field selection out of range`, probe run 1). Fixed to
+  `d.y`.
+- **ANGLE warns on dynamic vector indexing** (`p[a] = s` in the draft `cube()`): "Performance: dynamic
+  indexing of vectors and matrices is emulated and can be slow", in every program's info log. `cube()`
+  rewritten with `equal()` and swizzles; probe (e) now reports no warnings and (f) shows the winding
+  is still counter-clockwise.
+- **Height fog evaluated at the mean height nearly vanished from altitude**: from 1,500 m the horizon
+  had almost no fog (shot `far.png`, first version). Replaced by the exact integral of
+  `exp(-h / 350)` along the ray; the horizon now fogs out from 1,500 m.
+- **From 1,500 m the far-fade circle of the 4 km tile is visible** as the edge of the city, even with
+  the fixed fog (`shots/T00/far.png`). Expected from the tile size; relevant to T11 (how high the tour
+  goes) and T13 (fog). Not changed here.
+- **The default uniform-block binding is enough:** probe (c) reads `UNIFORM_BLOCK_BINDING` 0 and all 64
+  slots right with no `uniformBlockBinding` call, so `prog()` makes none.
+- **terser option set C (`booleans_as_integers`) turns `true` into `1`**: the harness's
+  `window.__READY = true` became `= 1`, and the scripts' `=== true` wait timed out once set C won.
+  Scripts now test truthiness. Product code must never compare a boolean with `=== true`.
+- **Headless Chromium ticks requestAnimationFrame every 8.0 ms here** (median and p95 8.0 to 8.1 ms, 632
+  and 638 frames in 5 s), not 16.7; whether that is the display's refresh was not established.
+- **`tsconfig.json` has `types: []`**, so a test importing `node:fs` failed typecheck. Product stays
+  DOM-only; tests get Node types through `tsconfig.tests.json`.
+- **My first `--sabotage` hit a shader that was not in the bundle** (`dev/gltest/all.glsl`), so the
+  sabotaged verify passed. Sabotage now happens in the loader, on a shader actually bundled.
+
 ## 10. Decision log
+
+- 2026-11-18 **One `.glsl` file per program for both stages** (`prog(src, src)`, fragment code under
+  `#ifdef FS`), as in `dev/probe/` and `src/engine.glsl`. Varyings are declared once per stage in the
+  same file. Fewer files and one text for deflate; separate files still work.
+- 2026-11-18 **`inst(buffer, sizes)` takes a buffer** (as §10.4 says), not data: `inst(buf(data), [4, 4])`.
+  A layer that rewrites its buffer keeps the handle from `buf(data, 35048)`.
+- 2026-11-18 **`tex(w, h, data, float, t)` takes bytes, not a canvas.** One `texImage2D` call: TypeScript
+  cannot pick the overload for a union, and a cast is not allowed. A canvas goes in as
+  `ctx.getImageData(0, 0, w, h).data`. The stub's comment said "or a canvas"; T08 must use that idiom.
+- 2026-11-18 **Added exports beyond §10.4**, all in my files: `gl.ts` `drawInst`, `bindTarget`,
+  `bindTex`, `floatTargets`, the `Target` type and the state modes `OPAQUE`, `TWO_SIDED`, `ADD`, `SKY`,
+  `FULL`; `engine.ts` `time`, `quality`, `scale`, and `setMood(m, snap)`. `target()` gained `old` for
+  resizing in place and returns `[fb, tex, rb, w, h]`.
+- 2026-11-18 **State modes are bits** (1 depth test, 2 depth write, 4 additive, 8 cull). Depth func
+  LEQUAL and blend ONE, ONE are set once in `glInit`.
+- 2026-11-18 **Infinite-far projection, near 0.5 m**: depth reaches 1 only at infinity, so the sky at
+  `z = w` is always behind. With a 24-bit depth buffer the resolution at 2 km is about 0.5 m (arithmetic,
+  not measured); coplanar faces that far are fogged.
+- 2026-11-18 **Mirror pass = uVP times diag(1, -1, 1)** with `frontFace(CW)`; the ground samples `T1` at
+  its own `gl_FragCoord`. `uCam.w` = 1 in that pass so `ray()` flips.
+- 2026-11-18 **The engine binds unit 0 to null each frame** so no scene program can form a feedback
+  loop with the texture post left there.
+- 2026-11-18 **Fog density = 2.2 / R1** at each quality; T13 may retune.
+- 2026-11-18 **Default beat**: `uTime.w = uMix.x = (1 - fract(beats))^2`, `uMix.yz = 0.5`, written
+  before the updates so audio overwrites them.
+- 2026-11-18 **Adaptive render scale**: steps down by 0.85 after 0.5 s averaging over 20 ms, back up after
+  4 s under 17.5 ms, between 0.5 and 1. Not exercised on a slow device.
+- 2026-11-18 **The default blit ships** (about 150 bytes estimated, not isolated: removing it also
+  removes `common.glsl` while every layer is a stub, which makes the measurement meaningless). It is a
+  T14 cut once T09's post always exists.
+- 2026-11-18 **`"use strict"` kept**: esbuild emits it because tsconfig is `strict`; removing it saves
+  8 bytes (measured, quick size). Strict semantics are worth more; listed for T14.
+- 2026-11-18 **smoke budget is p95 18 ms** of rAF intervals, not 16.6: a frame that keeps up with a
+  60 Hz display measures about 16.7 ms, so 16.6 could never pass. Agents.md's own definition of the
+  budget (16.6 ms, p95) should be read as "keeps up with 60 Hz".
+- 2026-11-18 **verify compares screenshots**, both builds at `DEV=false`, four views across all three
+  qualities and moods, and demands identical pixels; it also fails when the reference frame is
+  nearly empty.
+- 2026-11-18 **Owned paths added: `src/engine.glsl` and `tsconfig.tests.json`** (frontmatter). The tests project gives tests Node types while the product stays DOM-only. The engine's blit needs a shader the
+  minifier sees; GLSL inside a TypeScript string would not be renamed with the rest.
 
 ## 11. Contract change requests
 
+None filed. T00 owns the contracts; these changes to `src/common.glsl` were made before the freeze,
+as M1 requires, and are listed so the orchestrator can check them:
+
+- `place()`: `d.z` -> `d.y` (compile fix).
+- `cube()`: same output, rewritten without dynamic indexing; faces in order -x +x -y +y -z +z.
+- `fogAmount()`: exact height-fog integral along the ray; same signature.
+- Comments only: none else. `src/contracts.ts` unchanged.
+
 ## 12. Outcomes and retrospective
+
+**Result against Purpose.** A contributor can draw into the city and know what it costs: `shot.mjs`
+renders any set of layers at a fixed camera and time; `npm run build` produces the single file and
+prints its size; `npm run size` gives each module's marginal cost against its plan's budget; `npm run
+verify` proves the packed harness draws exactly what the sources draw. The helper and engine are
+proven on the GPU by `npm run probe` and by the probe layer.
+
+**Measured bytes** (`npm run size`, 2026-11-18): core (contracts, gl, engine, common.glsl,
+engine.glsl) **2,678** against a budget of 2,600, deflate only, so 78 over. The product file today is
+**3,856 bytes** (container 520 + deflate 3,336; every layer still a stub). What the core buys: context,
+programs with error reporting, instancing, targets with in-place resize, five state modes, the clock and
+default beat, the camera matrices, mirror and main passes, quality and density, adaptive render scale,
+mood easing, the blit. Cuts available: the blit once post exists, `"use strict"` (8 bytes).
+
+**Acceptance evidence** (all run 2026-11-18 on this machine):
+
+- `npm run probe`: renderer `ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 SUPER ... Direct3D11 ...)`;
+  PASS float targets, (a) quadrants (1,0,0,1) (0,1,0,1) (0,0,1,1) (1,1,0,1), gap 0, gl error 0;
+  (b) instance values 1,2,3,4; (c) 64/64 slots, binding 0, 256 bytes; (d) 2, 6, linear 4, after ADD 8,
+  complete; (e) linked, no errors, no warnings; (f) +z seen, -z with CW. `PROBE OK`. The same with
+  `--minified`.
+- `npm run check`: typecheck ok, tests 8 files 94 passed, import rules ok, plans:check ok, `CHECK OK`.
+  `npm run plans:check`: 15 plans, `OK`. `npm run check:task -- T00`: `PASS T00-foundation`.
+- Gates shown failing: a contract constant changed (`AV_ROAD` 12) fails `tests/contracts` ("expected
+  12 to be 13"); an import of `./buildings/index` from `engine.ts` is reported as a section 4.2
+  violation. Both reverted.
+- `shot.mjs --layers probe --cam 2048,300,2048,0.6,-0.3 --t 5 --out shots/T00/probe.png`: looked at.
+  Boxes in pastel palette tints stand in blocks on a grid of magenta curbs, fade into pink sunset
+  fog with distance, megatowers on the left, roof glows. Street level (`street.png`): wet road
+  mirroring the boxes on both sides and the fog-coloured sky; the crossing street's curb 3 m ahead is
+  a thick band at the bottom edge. 1,500 m (`far.png`): the grid runs to a fogged horizon; the city
+  sinks smoothly into the ground at the far fade. Top (`top.png`): every road clear, curbs on both
+  sides, sky reflection in the avenue crossing. Quality 0, mood 1 (`q0-mood1.png`): sparser boxes
+  (3,125 instances against 15,620), midnight-blue fog. Street, quality 0, mood 2: no reflection on
+  the road, pink haze.
+- 5 km flight, 250 frames of 20 m along -z at 150 m (`shots/T00/flight/`): frame-to-frame difference
+  median 2.81, p95 5.42, max 15.03 at step 116, which is a near tower leaving the frame (frames 115,
+  116 looked at). The tile edge is crossed at step 105; frames 104 and 106 show the same corridor
+  continuing, and those steps are not among the five largest differences. No pop and no seam seen.
+- `npm run build`: `dist/synthwave-city.html 3,856 bytes`, `change 0` on a second run (reproducible);
+  `--no-rename` gives 5,060.
+- `npm run smoke` on the product: boots from file:// through T01's container, 632 frames, no console
+  or shader errors, canvas 1920x1080, **fails "the frame is black"** because no layer draws yet.
+  `smoke --file` on the packed probe harness (full pipeline): mean 100.3, 638 frames, p95 8.1 ms,
+  `SMOKE OK`.
+- `npm run verify`: four views (q 2, 2, 1, 0; moods 0, 1, 2, 0), 0 of 518,400 pixels differ in each,
+  `VERIFY OK`. With `--sabotage` (fog() renamed wrongly in `dev/probe/box.glsl`): shader compile
+  errors and 180,346 differing pixels at the top view, `VERIFY FAILED`.
+- `npm run size`: a table of 12 rows and a total (above).
+
+**Not verified.** Firefox, Safari, any phone; the adaptive render scale on a slow GPU; frame time at
+2560x1440 on the real city; whether headless rAF at 8 ms matches the display; context loss (T12); the
+dev server's live reload in a browser (it built, served and watched; no page was reloaded by it);
+`shot --app 1` beyond producing a black frame of the stub app.
+
+**Documentation corrections for the orchestrator** (Agents.md and architecture.md are not mine):
+see the report.
+
+### Orchestrator changes after hand-over (2026-11-18)
+
+- `src/engine.ts`: fog density `2.2 / R1` to `1.2 / R1`; `src/common.glsl`: the warm and cool fog
+  colours dimmed by about a third. Reason: the probe frame was a pink wash at 220 m, while the parent
+  project's pictures have a thin haze and dark silhouettes (§6.3). Starting values for wave 2; T13
+  owns the final numbers. `npm run check` and `npm run verify` pass after the change.
+- Documentation corrections reported by T00 to T03 applied to `architecture.md` and `Agents.md`.

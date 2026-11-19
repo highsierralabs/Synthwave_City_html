@@ -92,15 +92,17 @@ vec3 mood(vec3 a, vec3 b, vec3 c) {
 // Colour of the fog in a view direction: warm towards the sun, violet away from it.
 vec3 fogColor(vec3 dir) {
   float s = clamp(dot(normalize(dir.xz + 1e-5), uSun.xz) * 0.5 + 0.5, 0.0, 1.0);
-  vec3 warm = mood(vec3(0.55, 0.12, 0.22), vec3(0.06, 0.07, 0.24), vec3(0.50, 0.14, 0.42));
-  vec3 cool = mood(vec3(0.10, 0.04, 0.22), vec3(0.02, 0.02, 0.10), vec3(0.05, 0.12, 0.26));
+  vec3 warm = mood(vec3(0.36, 0.08, 0.18), vec3(0.05, 0.06, 0.20), vec3(0.34, 0.10, 0.30));
+  vec3 cool = mood(vec3(0.07, 0.03, 0.17), vec3(0.02, 0.02, 0.09), vec3(0.04, 0.09, 0.20));
   return mix(cool, warm, s * s);
 }
 // Fog between the camera and a render-space point, denser near the ground.
+// Density falls as exp(-height / 350 m); this is its exact integral along the ray, so the fog stays
+// right when the camera is high above the city. uFade.z is the density at the ground.
 float fogAmount(vec3 p) {
-  float d = length(p - vec3(0.0, uCam.y, 0.0));
-  float h = max(0.5 * (p.y + uCam.y), 0.0);
-  return 1.0 - exp(-d * uFade.z * exp(-h / 350.0));
+  float a = max(p.y, 0.0) / 350.0, b = max(uCam.y, 0.0) / 350.0;
+  float k = abs(b - a) < 0.01 ? exp(-a) : (exp(-a) - exp(-b)) / (b - a);
+  return 1.0 - exp(-length(p - vec3(0.0, uCam.y, 0.0)) * uFade.z * k);
 }
 // Apply fog to a colour at a render-space point. Run every colour through this before output.
 vec3 fog(vec3 col, vec3 p) {
@@ -146,7 +148,7 @@ vec3 place(vec3 anchor, vec3 local) {
   vec2 d = anchor.xz - uCam.xz;
   d -= TILE * floor(d / TILE + 0.5);
   float k = 1.0 - smoothstep(uFade.x, uFade.y, length(d));
-  return vec3(d.x + local.x, (anchor.y + local.y) * k, d.z + local.z);
+  return vec3(d.x + local.x, (anchor.y + local.y) * k, d.y + local.z);
 }
 
 // Corner of a quad from gl_VertexID, 6 vertices per quad, both coordinates in -1..1.
@@ -156,16 +158,13 @@ vec2 quad() {
 }
 // Unit box from gl_VertexID, 36 vertices: x and z in -1..1, y in 0..1 (it stands on its base).
 // n is the outward face normal. Counter-clockwise from outside.
+// Faces in order -x +x -y +y -z +z, 6 vertices each. No dynamic vector indexing (ANGLE warns on it).
 vec3 cube(out vec3 n) {
-  int f = gl_VertexID / 6, a = f >> 1;
-  float s = float(f & 1) * 2.0 - 1.0;
+  float s = float(gl_VertexID / 6 & 1) * 2.0 - 1.0;
+  vec3 e = vec3(equal(ivec3(gl_VertexID / 12), ivec3(0, 1, 2)));
   vec2 q = quad();
-  vec3 p = vec3(0.0);
-  n = vec3(0.0);
-  p[a] = s;
-  n[a] = s;
-  p[(a + 1) % 3] = q.x * s;
-  p[(a + 2) % 3] = q.y;
+  n = e * s;
+  vec3 p = n + e.zxy * q.x * s + e.yzx * q.y;
   p.y = p.y * 0.5 + 0.5;
   return p;
 }

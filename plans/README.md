@@ -6,7 +6,7 @@ ownership of every path are in [architecture.md](../architecture.md) §14.
 | Plan | Task | Wave | Executor | Budget (packed bytes) |
 |---|---|---|---|---|
 | [T00-foundation](T00-foundation.md) | Toolchain, contracts, GL helper, engine, harness, gates | 1 | opus/high | 2,600 |
-| [T01-packer](T01-packer.md) | Self-extracting container | 1 | sonnet/high | 1,300 |
+| [T01-packer](T01-packer.md) | Self-extracting container | 1 | sonnet/high | 600 |
 | [T02-glslmin](T02-glslmin.md) | Shader minifier | 1 | opus/high | build tool |
 | [T03-city-plan](T03-city-plan.md) | The deterministic city | 1 | sonnet/high | 1,100 |
 | [T04-backdrop](T04-backdrop.md) | Sky, ground, street lamps | 2 | opus/medium | 2,600 |

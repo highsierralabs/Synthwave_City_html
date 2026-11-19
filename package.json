@@ -16,7 +16,7 @@
     "probe": "node scripts/probe.mjs",
     "dev": "node scripts/dev.mjs",
     "shot": "node scripts/shot.mjs",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.tests.json",
     "test": "vitest run",
     "check": "node scripts/check.mjs",
     "check:task": "node scripts/check-task.mjs",
