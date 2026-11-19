@@ -40,7 +40,12 @@ export function zlibDeflate(js) {
 }
 
 export function inflate(z) {
-  return inflateRawSync(z);
+  // Strict, like the browser: DecompressionStream('deflate-raw') rejects any byte after the final
+  // block, while inflateRawSync alone ignores it. A stream that Node accepted and the browser refused
+  // shipped once (a bit-shifted padding candidate that ended in a whole zero byte).
+  const { buffer, engine } = inflateRawSync(z, { info: true });
+  if (engine.bytesWritten !== z.length) throw new Error('inflate: bytes after the final deflate block');
+  return buffer;
 }
 
 /**

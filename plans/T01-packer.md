@@ -272,3 +272,19 @@ file, that it starts, and how long the decode takes (55 to 110 ms on this deskto
 golfing the wrapper: the wrapper stayed at 510 bytes and the data overhead fell from 3.1% to 0.31%. What is
 left to cut is small: `<body>` (12 bytes, unsafe to drop) and the padding (about 5 bytes). A file with no doctype
 is already the cheapest; a doctype would cost 30 bytes.
+
+### Defect found after hand-over and fixed by the orchestrator (2026-11-18)
+
+Reported independently by T10 and T11 during wave 2: the packed `utf16` file of the real app did not
+boot (`Failed to fetch`), while the `ascii` twin ran. Cause: `padStream` pads to a multiple of 8 bytes
+by bit-shifting the stream behind empty blocks, and a shifted candidate can end in a whole zero byte
+after the final block. `padStream` checked candidates with `inflateRawSync`, which ignores trailing
+bytes; `DecompressionStream('deflate-raw')` rejects them (this plan's own M2 finding). The build's
+stream was 16,960 bytes of which inflate consumed 16,959.
+
+Fix: `inflate` in `tools/pack/deflate.mjs` is now strict (it throws unless every input byte was
+consumed), so `padStream` skips such candidates and `pack`'s self-check would catch one. Regression
+test `tests/pack/trailing.test.mjs`: 60 payload lengths, each packed stream consumed to its last
+byte. Seen to fail with the old check ("expected 55 to be 56") and pass with the new one.
+`npm run smoke` on the rebuilt file: SMOKE OK. The earlier browser test passed only because none of
+its payloads happened to pick such a candidate.
