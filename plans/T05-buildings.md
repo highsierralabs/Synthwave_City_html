@@ -1,7 +1,7 @@
 ---
 id: T05-buildings
 title: Neon towers
-status: ready
+status: done
 depends_on: [T00, T03]
 owns: [src/buildings/**, plans/T05-buildings.md]
 reads: [architecture.md, Agents.md, src/contracts.ts, src/common.glsl, src/gl.ts, src/engine.ts, src/plan.ts]
@@ -102,10 +102,132 @@ Shots go in `shots/T05/`, scratch in `.tmp/T05/`. Both can be deleted at any tim
 
 ## 8. Progress
 
+- [x] 2026-11-18 Read Agents.md, architecture.md, this plan, `src/gl.ts`, `src/engine.ts`,
+  `src/common.glsl`, `src/plan.ts`, `dev/probe/`; looked at the parent's `skyline.png`, `rooftops.png`,
+  `street.png`, `plaza.png`. Status set to in-progress.
+- [x] 2026-11-18 M1: `src/buildings/index.ts` (one program, one vertex array of the plan's boxes, one
+  instanced draw at `O_BUILD` with `reflect = 1`) and `src/buildings/buildings.glsl` (one file, both
+  stages). Window grid in metres on all four sides, filtered with a private `grid()` that takes
+  `fwidth` before `fract` and fades to the average once a cell is under about two pixels.
+- [x] 2026-11-18 M2: per-building identity from `hash3(seed)`: trim colour, two window colours, bay
+  width 2 to 4 m, floor height 3.2 to 3.8 m, mullion proportions, lit fraction; neon trim on roof
+  lines and vertical corners; crowns with fins; spires with rings and a blinking red tip; megatowers
+  with 32 m bands, 8 m pinstripes and a climbing band; roofs with panels, a ring and a red dot.
+- [x] 2026-11-18 M3: light levels checked against §6.2 with the plain blit and with T09's
+  in-progress post (see Validation evidence below).
+- [x] 2026-11-18 M4: roofs, mirror pass (buildings show in the probe's and the backdrop's road
+  reflection), all four optional items (equaliser facades, sign panels, storefronts, travelling band
+  on megatowers), far-fade dimming, density prefix that never cuts a building. Measured 1,012 bytes.
+- [x] 2026-11-18 Acceptance shots taken with `--layers all` (real sibling layers) and with
+  `probe,buildings[,post]`; `npm run check:task -- T05` exit 0; `node scripts/verify.mjs --layers
+  buildings` and `npm run verify` both VERIFY OK.
+
+Left for later (not this task): the art pass may retune the numbers listed under Outcomes.
+
 ## 9. Surprises and discoveries
+
+- The trim line held at "at least a pixel" (`ew = max(0.3, fwidth(e))`) did not make mid-distance
+  facades pale, as first suspected; a diagnostic shot with fog removed (`shots/T05/diag_nofog.png`)
+  showed the pale colour was the window average itself. Lowering the far average fixed most of it.
+  The remaining pink-grey on facades 400 to 900 m away is the shared fog colour, which is T00's
+  (`common.glsl`), not this layer's.
+- `place()` scales heights to zero across the far fade, so a sinking building leaves its roof
+  outline as a flat neon square on the ground (`shots/T05/m1_far.png`, `acc_over1200.png` before the
+  fix). Fixed inside this module: the vertex shader reads the fade factor as
+  `place(vec3(aA.x, 1.0, aA.z), vec3(0.0)).y` and the fragment colour is multiplied by it.
+- With `--layers probe,buildings` the probe draws its own flat boxes at the same depth; mine win
+  (drawn after, `LEQUAL`), but `npm run verify` with all layers also includes the probe, so it was
+  re-run with `--layers buildings` alone to prove the packed shader, not the probe's.
+- All three density prefixes (0.4, 0.7, 1) already end on a building boundary for the shipped seed
+  (`.tmp/T05/find.ts`: the next box's seed differs at 1,561, 2,733 and 3,904), so the extension loop
+  in `draw` is a guarantee for other seeds and densities rather than a visible fix today.
 
 ## 10. Decision log
 
+- 2026-11-18. Lit fraction is driven by the box's roof height (`(vA.y + vB.y) / 800`) plus hashes,
+  not by the district byte in the cell texture: roof height tracks the district (§5.5) and needs no
+  texture fetch. Reason: fewer bytes, same effect.
+- 2026-11-18. Facade average beyond two pixels per window is `0.06 * lit * (cA + cB)`, about half
+  the energy-conserving value. Reason: at the energy-conserving value, facades 300 m and further
+  away read as beige-grey (`shots/T05/m3_high.png`), against the art direction (deep indigo darks,
+  never washed out). The darker average lets the trim carry the skyline, as in the parent's
+  `skyline.png`. This is a look choice, not a filtering threshold, and the art pass may move it.
+- 2026-11-18. Trim width is at least half a pixel each side and its brightness falls as
+  `sqrt(0.3 / width)`, not linearly. Reason: the brief puts edges first for reading the skyline at a
+  distance; a strictly energy-conserving line fades out too early.
+- 2026-11-18. Windows are lit in runs of three along a floor, with colour and brightness per window,
+  and floors in bands of five. Reason: per-window salt-and-pepper did not read like the parent's
+  blocky lit clusters (`rooftops.png`).
+- 2026-11-18. Sign-panel fill uses window colour B (orange or cyan), not A. Reason: A can be ice
+  white, which read as a blank white rectangle at a distance (`shots/T05/all_skyline.png`).
+- 2026-11-18. All four optional items kept: the module is at 1,012 of 2,800 bytes with them.
+- 2026-11-18. The density prefix is extended in `draw` to the end of the building it lands in
+  (boxes of one building are contiguous in `plan.boxes`). A short loop over typed-array reads, no
+  allocation.
+
 ## 11. Contract change requests
 
+None. Two things a later plan might want, not needed now:
+- The private `grid(x, w)` in `buildings.glsl` (periodic filtered line that fades to its average)
+  would belong in `common.glsl` if a second layer wants one; one copy costs nothing extra today.
+
 ## 12. Outcomes and retrospective
+
+**Result against Purpose.** The city layer exists: 3,904 boxes in one instanced draw, every tower
+lit from inside with a dense window grid in two colours, neon trim on roof lines and vertical
+corners in a per-building colour, lit crowns, spires with blinking red tips, tiered megatowers with
+bands of light, roofs with panels, rings and red dots, storefronts at street level, animated sign
+panels, equaliser facades on the beat, fog on everything, mirrored in the wet road. With the real
+sibling layers (`shots/T05/fin_skyline.png`) the picture reads as the parent's skyline: dense,
+garish, edge-lit, with a megatower in view.
+
+**Bytes.** `npm run size -- buildings`: **1,012 bytes** against a budget of 2,800 (file 17,466 at
+the time, with siblings mid-flight). What each optional item would save if cut was not measured one
+by one; the whole module is 1,012, so any single cut is a fraction of that.
+
+**Validation evidence** (all run 2026-11-18, RTX 4070 SUPER via ANGLE D3D11, as printed by shot.mjs):
+
+- Street level up a canyon, `fin_canyon.png` (`--cam 2051.5,1.7,2300,0,0.6 --layers all`): low
+  buildings both sides with crisp single windows, coloured storefronts under neon strips, an orange
+  slatted roof band, a magenta-framed chevron sign. No errors.
+- Skyline, `fin_skyline.png` (`--cam 3712,300,504,0,-0.1 --layers all`): megatower in the centre
+  with yellow bands and spire in front of the sun; dense window grids, coloured sign panels, neon
+  edges on every box. Clipped 0.00%.
+- 1,200 m overview, `fin_over1200.png`: every building outlined in its trim colour, the tiered
+  purple megatower bottom left, sign panels as coloured rectangles, sinking buildings dim into the
+  far fade with no flat outline. Clipped 0.00%.
+- Straight down from 800 m, `fin_top800.png`: roofs show panel grids, rings, red dots and
+  perimeter trim; no roof is blank.
+- Megatower close, `fin_mega.png` / `acc_mega.png` (`--cam 1920,380,512,0.785,0.05`): the 625 m
+  megatower with tier steps, magenta 32 m bands, spire with rings; a green crown with fins in front.
+- Quality 0, `fin_q0.png` (`--q 0`): the city is thinner; every visible building is whole.
+- Sideways sequence, `seq_0..7.png` (8 frames, 3 m per frame, 300 m up), compared as
+  `seq_mosaic.png` (frames 0, 1, 6, 7): the mid-distance facades stay calm and identical frame to
+  frame apart from the shift; no sparkle seen in the stills.
+- Tile edge, `edge_0..3.png` (20 m per frame across x = 4096), `edge_mosaic.png`: no seam, no pop.
+- Equaliser, `diag_eq_0/1.png` (diagnostic build with every building forced to equaliser, reverted
+  after): green level bars change between beats.
+- M3 light levels: with the plain blit (`--layers probe,buildings`) clipped 0.00 to 0.14% of pixels
+  (the 0.14% at street level, where the probe's curb fills the bottom of the frame); with post,
+  0.00% in every shot. Values written: walls 0.022 to 0.055 (L0), windows 0.4 to 1.0 (L1),
+  storefronts 0.45, trim 2.5, floor lines 2.0, sign stripes 1.8, crown fins up to 1.55, megatower
+  bands 1.5 (L2), spire tips 8 and roof dots 6 (L3, small).
+- Console: no errors and no shader warnings in any shot.mjs output.
+- `npm run check:task -- T05`: PASS, exit 0.
+- `node scripts/verify.mjs --layers buildings`: 4 views, 0 differing pixels, VERIFY OK; `npm run
+  verify` (all layers) VERIFY OK.
+
+**Not verified.**
+- Shimmer in real motion: judged from still sequences only, not from live playback.
+- Frame time: not measured. Nine agents share this GPU and CPU, so no number taken now would mean
+  anything.
+- Any phone or browser other than headless Chromium 151 on this desktop.
+- Moods 1 and 2 on the buildings alone (verify renders them with all layers, but I did not inspect
+  those frames).
+- The marginal cost of each optional item separately.
+
+**For the art pass.** Numbers most worth a look, all in `buildings.glsl`: the far average `0.06`
+(facades 400 to 900 m away still look pink-grey under the shared fog); the fade threshold
+`smoothstep(0.2, 0.5, ...)` in `grid()` and `far`; trim brightness `2.5` and width rule; crown fin
+brightness (a near crown fills a lot of screen in `fin_mega.png`); storefront `0.45`; lit fraction
+`0.3 + height / 800`.
