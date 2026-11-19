@@ -660,7 +660,7 @@ without reading any other task's code.
 
 | Task | Plan | Owns | Needs |
 |---|---|---|---|
-| T00 | `T00-foundation` | `package.json`, lockfile, configs, `CLAUDE.md`, `src/contracts.ts`, `src/common.glsl`, `src/gl.ts`, `src/engine.ts`, `src/glsl.d.ts`, `dev/**`, `scripts/**`, `tests/contracts/**`, `plans/README.md` | none |
+| T00 | `T00-foundation` | `package.json`, lockfile, `tsconfig.json`, `vitest.config.mjs`, `.gitignore`, `.gitattributes`, `CLAUDE.md`, `src/contracts.ts`, `src/common.glsl`, `src/gl.ts`, `src/engine.ts`, `src/glsl.d.ts`, `dev/**`, `scripts/**`, `tests/contracts/**`, `plans/README.md` | none |
 | T01 | `T01-packer` | `tools/pack/**`, `tests/pack/**` | none |
 | T02 | `T02-glslmin` | `tools/glslmin/**`, `tests/glslmin/**` | none |
 | T03 | `T03-city-plan` | `src/plan.ts`, `tests/plan/**` | contracts |
@@ -673,8 +673,8 @@ without reading any other task's code.
 | T10 | `T10-audio` | `src/audio/**` | T00 |
 | T11 | `T11-camera` | `src/camera/**`, `tests/camera/**` | T00, T03 |
 | T12 | `T12-app-shell` | `src/main.ts` | T00 |
-| T13 | `T13-art-pass` | no paths of its own; a serial window in which it may retune numbers anywhere and log each change | all above |
-| T14 | `T14-squeeze-release` | `SIZE.md`, `README.md`, `LICENSE`, `docs/**`; a serial window in which it may edit any path to save bytes, logging each change | all above |
+| T13 | `T13-art-pass` | `docs/screenshots/**`; a serial window in which it may retune numbers anywhere and log each change | all above |
+| T14 | `T14-squeeze-release` | `SIZE.md`, `README.md`, `LICENSE`, `docs/release/**`; a serial window in which it may edit any path to save bytes, logging each change | all above |
 
 Every task also owns its own plan file.
 
