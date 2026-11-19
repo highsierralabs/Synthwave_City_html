@@ -36,6 +36,14 @@ export const UTF16_TAIL =
   'for(b=[];n;n>>=64n)b.push(n);' +
   'new Response(new Response(new BigUint64Array(b)).body.pipeThrough(new DecompressionStream("deflate-raw"))).text().then(eval)</script>';
 
+/** The linear-time variant (T14): the units are read in blocks of BLOCK digits, each block a number
+ *  of at most WORDS 64-bit words, so the BigInt work is linear in the length instead of quadratic. */
+export const BLOCK = 253;
+export const WORDS = 63;
+export const UTF16L_TAIL =
+  '";b=[];for(i=0;i<s.length;i+=253){n=0n;for(c of s.slice(i,i+253))n=n*63358n+BigInt((c=c.charCodeAt())>55295?c-2176:c-128);for(;n;n>>=64n)b.push(n)}' +
+  'new Response(new Response(new BigUint64Array(b)).body.pipeThrough(new DecompressionStream("deflate-raw"))).text().then(eval)</script>';
+
 export const ASCII_HEAD = '<body><script>fetch("data:;base64,';
 export const ASCII_TAIL =
   '").then(r=>new Response(r.body.pipeThrough(new DecompressionStream("deflate-raw"))).text()).then(eval)</script>';
@@ -135,6 +143,45 @@ export function encodeUnits(bytes) {
 }
 
 /**
+ * Bytes to code units in blocks (the linear variant): every WORDS * 8 bytes become exactly BLOCK
+ * digits (leading zero digits kept); the last, shorter block takes only the digits it needs.
+ * @param {Uint8Array} bytes  length a multiple of 8
+ * @returns {Uint16Array}
+ */
+export function encodeUnitsBlocks(bytes) {
+  const parts = [];
+  const size = WORDS * 8;
+  for (let i = 0; i < bytes.length; i += size) {
+    const chunk = bytes.subarray(i, i + size);
+    let u = encodeUnits(chunk);
+    if (i + size < bytes.length) {
+      if (u.length > BLOCK) throw new Error('block overflow');
+      const full = new Uint16Array(BLOCK).fill(digitToUnit(0));
+      full.set(u, BLOCK - u.length);
+      u = full;
+    }
+    parts.push(u);
+  }
+  const out = new Uint16Array(parts.reduce((a, p) => a + p.length, 0));
+  let o = 0;
+  for (const p of parts) { out.set(p, o); o += p.length; }
+  return out;
+}
+
+/** Code units to bytes, as the linear unpacker does it (each block cut into words until it is zero). */
+export function decodeUnitsBlocks(units) {
+  const words = [];
+  for (let i = 0; i < units.length; i += BLOCK) {
+    let n = 0n;
+    for (let j = i; j < Math.min(units.length, i + BLOCK); j++) n = n * BASE_N + BigInt(unitToDigit(units[j]));
+    for (; n; n >>= 64n) words.push(n & 0xffffffffffffffffn);
+  }
+  const out = Buffer.alloc(8 * words.length);
+  words.forEach((w, k) => out.writeBigUInt64LE(w, 8 * k));
+  return out;
+}
+
+/**
  * Code units to bytes, as the unpacker does it: the number is cut into 64-bit words, low word first,
  * so the result has a multiple of 8 bytes and no trailing all-zero word.
  * @param {ArrayLike<number>} units
@@ -185,6 +232,7 @@ export function buildContainer(z, container) {
     return Buffer.from(ASCII_HEAD + Buffer.from(z).toString('base64') + ASCII_TAIL, 'latin1');
   }
   if (z.length % 8) throw new Error('utf16 needs a stream padded to a multiple of 8 bytes');
+  if (container === 'utf16l') return utf16le({ head: UTF16_HEAD, tail: UTF16L_TAIL }, encodeUnitsBlocks(z));
   const units = encodeUnits(z);
   return utf16le({ head: UTF16_HEAD, tail: UTF16_TAIL }, units);
 }
@@ -212,11 +260,13 @@ export function extractStream(html) {
   const buf = Buffer.from(html.buffer, html.byteOffset, html.byteLength);
   if (buf[0] === 0xff && buf[1] === 0xfe) {
     const text = buf.toString('utf16le', 2);
-    if (!text.startsWith(UTF16_HEAD) || !text.endsWith(UTF16_TAIL)) throw new Error('not a utf16 container');
-    const body = text.slice(UTF16_HEAD.length, text.length - UTF16_TAIL.length);
+    const linear = text.endsWith(UTF16L_TAIL);
+    const tail = linear ? UTF16L_TAIL : UTF16_TAIL;
+    if (!text.startsWith(UTF16_HEAD) || !text.endsWith(tail)) throw new Error('not a utf16 container');
+    const body = text.slice(UTF16_HEAD.length, text.length - tail.length);
     const units = new Uint16Array(body.length);
     for (let i = 0; i < body.length; i++) units[i] = body.charCodeAt(i);
-    return { container: 'utf16', stream: decodeUnits(units) };
+    return linear ? { container: 'utf16l', stream: decodeUnitsBlocks(units) } : { container: 'utf16', stream: decodeUnits(units) };
   }
   const text = buf.toString('latin1');
   if (!text.startsWith(ASCII_HEAD) || !text.endsWith(ASCII_TAIL)) throw new Error('not a packed file');

@@ -18,7 +18,7 @@ describe('pack and unpack', () => {
       'α β γ 日本語 😀 ' + sample(20),
     ];
     for (const js of texts) {
-      for (const container of ['utf16', 'ascii']) {
+      for (const container of ['utf16', 'utf16l', 'ascii']) {
         for (const level of ['fast', 'normal']) {
           const r = await pack(js, { container, level });
           expect(r.container).toBe(container);
@@ -52,7 +52,7 @@ describe('pack and unpack', () => {
   it('gives identical bytes for the same input, at every level', async () => {
     const js = sample(80);
     for (const level of ['fast', 'normal', 'max']) {
-      for (const container of ['utf16', 'ascii']) {
+      for (const container of ['utf16', 'utf16l', 'ascii']) {
         const a = await pack(js, { level, container });
         const b = await pack(js, { level, container });
         expect(Buffer.compare(a.html, b.html)).toBe(0);
@@ -108,5 +108,17 @@ describe('unpack', () => {
   it('rejects bytes that are not a packed file', async () => {
     await expect(unpack(new TextEncoder().encode('<body>hello'))).rejects.toThrow();
     await expect(unpack(new Uint8Array(0))).rejects.toThrow();
+  });
+});
+
+// T14: the linear-time block variant, across block boundaries (504 bytes of stream per block).
+describe('utf16l (linear decode)', () => {
+  it('round-trips streams of one to several blocks', async () => {
+    for (const n of [10, 300, 700, 1500, 4000]) {
+      const js = randomBytes(n).toString('base64');
+      const r = await pack(js, { container: 'utf16l', level: 'fast' });
+      expect(r.container).toBe('utf16l');
+      expect(await unpack(r.html)).toBe(js);
+    }
   });
 });

@@ -24,11 +24,11 @@ export { UTF16_HEAD, UTF16_TAIL, ASCII_HEAD, ASCII_TAIL } from './container.mjs'
  */
 export async function pack(js, options = {}) {
   const container = options.container ?? 'utf16';
-  if (container !== 'utf16' && container !== 'ascii') throw new Error(`unknown container: ${container}`);
+  if (container !== 'utf16' && container !== 'utf16l' && container !== 'ascii') throw new Error(`unknown container: ${container}`);
   const { streams } = await compress(js, options.level ?? 'normal');
   let best;
   for (const s of streams) {
-    const stream = container === 'utf16' ? padStream(s.bytes, inflate) : s.bytes;
+    const stream = container === 'ascii' ? s.bytes : padStream(s.bytes, inflate);
     const html = buildContainer(stream, container);
     if (!best || html.length < best.html.length) best = { html, deflated: s.bytes.length, compressor: s.compressor };
   }
