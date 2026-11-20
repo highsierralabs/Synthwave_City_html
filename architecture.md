@@ -716,6 +716,7 @@ without reading any other task's code.
 | T14 | `T14-squeeze-release` | `SIZE.md`, `README.md`, `LICENSE`, `docs/release/**`; a serial window in which it may edit any path to save bytes, logging each change | all above |
 | T15 | `T15-playtest-fixes` | its plan only; fixes from the first play test, made by the orchestrator in other tasks' paths | T14 |
 | T16 | `T16-track-order-docs` | `BUILD.md`; track order, the size decision, the laconic README, by the orchestrator | T15 |
+| T17 | `T17-publish` | `.github/**`; the remote and the Pages workflow | T16 |
 
 Every task also owns its own plan file.
 

@@ -1,0 +1,48 @@
+# Publishes the committed release file to GitHub Pages: index.html is docs/release/synthwave-city.html
+# byte for byte, safe.html its ASCII twin. Nothing is rebuilt here, so the site serves exactly the
+# file that was checked and committed. Owner: T17 (plans/T17-publish.md).
+#
+# The deploy job runs only while the repository is public: GitHub Pages is not available for this
+# private repository on its current plan, and the site would be public even if it were.
+
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: |
+          mkdir site
+          cp docs/release/synthwave-city.html site/index.html
+          cp docs/release/synthwave-city.safe.html site/safe.html
+          cp LICENSE site/
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
