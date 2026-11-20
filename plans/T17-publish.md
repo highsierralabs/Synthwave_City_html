@@ -7,7 +7,7 @@ owns: [plans/T17-publish.md, .github/**]
 reads: [Agents.md, docs/release/**, ../Synthwave_City/.github/workflows/pages.yml]
 budget: 0            # packed bytes added to the shipped file
 executor: orchestrator
-updated: 2026-11-19
+updated: 2026-11-20
 ---
 
 # T17: Push to the private remote and prepare GitHub Pages
@@ -68,6 +68,14 @@ repos/highsierralabs/Synthwave_City_html/pages -f build_type=workflow`, then re-
 - [x] 2026-11-19 M4. Run 44686037113: build job success in 6 s, deploy job skipped (private). The
   downloaded `github-pages` artifact holds `index.html` and `safe.html` byte-identical to
   `docs/release/synthwave-city.html` and `.safe.html`, and `LICENSE`.
+- [x] 2026-11-20 Review copy, the operator's choice: a tailnet-only preview. A scratch Node server
+  outside the repository binds `127.0.0.1:5182` and serves `docs/release/` (`/` the UTF-16 file,
+  `/safe.html` the ASCII twin, `text/html`, `no-store`, read on every request); `tailscale serve
+  --bg --http 5182` maps the tailnet to it, no funnel. Over the tailnet address both pages came back
+  200 `text/html` and byte-identical to the release files, and both booted in Chromium on the GPU
+  with a canvas and no console or shader errors. Not checked: the operator's phone or tablet. The
+  mapping persists; the server lives only as long as the session that started it. Remove with
+  `tailscale serve --http=5182 off`.
 
 ## 9. Surprises and discoveries
 
@@ -89,4 +97,5 @@ None.
 
 ## 12. Outcomes and retrospective
 
-Open until the operator chooses how the review copy is served (see the report of 2026-11-19).
+The review copy is served on the tailnet (Progress, 2026-11-20). Open until the operator reviews it
+and decides on making the repository public.
