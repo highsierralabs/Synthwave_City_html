@@ -23,7 +23,10 @@ root, for example `node .tmp/T14/ladder.mjs 0 14`.
 - Points 6 (the music plays and the city pulses with it) and 7 (it runs on a phone) were checked only
   as far as a script can: the code path exists, the file boots, the audio context runs and schedules
   notes after a click, and the beat values in the uniform block move. Listening, and a real phone, are
-  the operator's checks. **Which rung is "the" answer is the operator's decision.**
+  the operator's checks. **The operator chose the full 17,208-byte build as the answer (2026-11-19):
+  "I'm happy with the build size for all the features that it includes."** The ladder stays as the
+  record of what the bytes buy. It was not rebuilt after T16 swapped the track order, so rung 14
+  plays the 104 bpm track, which the full build now plays second.
 - Rungs further down were not built: every remaining cut removes a checklist item (air traffic,
   street traffic, the music, the tour) or a robustness item.
 

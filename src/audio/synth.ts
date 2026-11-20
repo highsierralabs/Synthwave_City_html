@@ -19,17 +19,17 @@ import { BPM0, F, U_MIX, U_TIME } from '../contracts';
  *  -6 dBFS (plans/T10-audio.md, M3). */
 export const LEVEL = 0.42;
 
-// Two stations, one row of characters each (W per row). Field k of the current station is
-// ROWS.charCodeAt(cur * W + k); digit fields subtract 48 ('0').
-//   0      tempo in bpm (also the pattern seed)                 'h' = 104, '|' = 124
-//   1      MIDI note of the bass root                            '!' = 33 (A1), '&' = 38 (D2)
-//   2..8   the scale: semitones of degrees 0..6, '0' + n         A natural minor, D major
-//   9..12  chord roots of the 4-bar progression, scale degrees   i VI III VII; vi IV I V
+// Two stations, one row of characters each (W per row); row 0 plays first. Field k of the current
+// station is ROWS.charCodeAt(cur * W + k); digit fields subtract 48 ('0').
+//   0      tempo in bpm (also the pattern seed)                 '|' = 124, 'h' = 104
+//   1      MIDI note of the bass root                            '&' = 38 (D2), '!' = 33 (A1)
+//   2..8   the scale: semitones of degrees 0..6, '0' + n         D major, A natural minor
+//   9..12  chord roots of the 4-bar progression, scale degrees   vi IV I V; i VI III VII
 //   13     hat density: chance of an extra sixteenth hat, /10
 //   14     brightness: filter cutoffs scale with it
 //   15     lead wave: 0 sawtooth, 1 square
-//   16     section length in bars, '0' + n                       '8' = 8, '@' = 16
-const ROWS = 'h!023578:05263208' + '|&024579;5304751@';
+//   16     section length in bars, '0' + n                       '@' = 16, '8' = 8
+const ROWS = '|&024579;5304751@' + 'h!023578:05263208';
 const W = 17;
 const get = (k: number): number => ROWS.charCodeAt(cur * W + k);
 

@@ -158,7 +158,10 @@ Each squeeze step is one commit, so any of them can be reverted alone.
   `ladder.mjs` rung r02 carries the corrected drag direction. SIZE.md and README.md updated; the
   ladder's pictures, draw counts and pixel differences, sections M1 to M3 and the Roadroller and
   unpacker measurements were not repeated.
-
+- [x] 2026-11-19 Reopened and closed by T16 (plans/T16-track-order-docs.md), by the orchestrator: the
+  operator chose the full build as the answer; README rewritten short, its detail moved to BUILD.md;
+  SIZE.md records the decision; release files rebuilt (17,208 bytes, new track order); `ladder.mjs`
+  rung r04 keeps the new first track; the ladder itself was not rebuilt.
 ## 9. Surprises and discoveries
 
 - **Locals were the biggest lossless lever left.** glslmin gave every identifier in every shader its

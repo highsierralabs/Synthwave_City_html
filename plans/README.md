@@ -21,6 +21,7 @@ ownership of every path are in [architecture.md](../architecture.md) §14.
 | [T13-art-pass](T13-art-pass.md) | Balance the picture | 3 | opus/high | within the gate |
 | [T14-squeeze-release](T14-squeeze-release.md) | Ledger, cut ladder, release | 3 | opus/high | as small as it goes |
 | [T15-playtest-fixes](T15-playtest-fixes.md) | Fixes from the operator's first play test: drag direction, finger flight, headlight flicker | after release | orchestrator | 100 (used 62) |
+| [T16-track-order-docs](T16-track-order-docs.md) | Second track plays first; full build chosen as the release; laconic README, detail in BUILD.md | after release | orchestrator | 0 (used 0) |
 
 Sections 8 to 12 of every plan (Progress, Surprises, Decision log, Contract change requests, Outcomes)
 are written by the executor as the work happens.

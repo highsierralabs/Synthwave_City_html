@@ -156,7 +156,7 @@ export function cameraMode(): number {
       rep(M, `import { audioHidden, audioMute, audioStart, audioStation } from './audio/index';`, `import { audioHidden, audioMute, audioStart } from './audio/index';`),
       cut('src/audio/index.ts', '/** Steps to the next station.', '  return station();\n}\n'),
       rep('src/audio/index.ts', `import { beat, begin, init, LEVEL, master, pump, station } from './synth';`, `import { beat, begin, init, LEVEL, master, pump } from './synth';`),
-      rep('src/audio/synth.ts', `const ROWS = 'h!023578:05263208' + '|&024579;5304751@';`, `const ROWS = 'h!023578:05263208';`),
+      rep('src/audio/synth.ts', `const ROWS = '|&024579;5304751@' + 'h!023578:05263208';`, `const ROWS = '|&024579;5304751@';`),
       rep('src/audio/synth.ts', `=> ROWS.charCodeAt(cur * W + k)`, `=> ROWS.charCodeAt(k)`),
       cut('src/audio/synth.ts', '/** Steps to the other station', '  return cur;\n}\n'),
       rep('src/audio/synth.ts', `  F[U_MIX + 3] = cur;\n`, ''),

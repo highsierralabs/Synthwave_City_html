@@ -7,7 +7,7 @@ owns: [src/audio/**, plans/T10-audio.md]
 reads: [architecture.md, Agents.md, src/contracts.ts, src/engine.ts]
 budget: 3400
 executor: opus/medium
-updated: 2026-11-18
+updated: 2026-11-19
 ---
 
 # T10: audio
@@ -131,7 +131,9 @@ Scratch in `.tmp/T10/`, renders in `shots/T10/`. Both can be deleted at any time
 - [x] 2026-11-18 Packed-build check (`.tmp/T10/packed.mjs`): `dist/synthwave-city.safe.html` boots, a
   click starts audio, `R` and `M` run without error. The UTF-16 `dist/synthwave-city.html` fails to
   boot in this session for a reason outside T10 (see Surprises).
-
+- [x] 2026-11-19 Reopened and closed by T16 (plans/T16-track-order-docs.md), by the orchestrator, at
+  the operator's request: the two rows of `ROWS` swapped, so the 124 bpm D major track plays first.
+  0 bytes; the beat probe measures 124 bpm after the click.
 ## 9. Surprises and discoveries
 
 - Kick onsets in the offline render are 6.2 ms after their scheduled time, every one (spread 0.1 ms).

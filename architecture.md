@@ -257,7 +257,8 @@ the remaining bytes buy.
 ladder has 15 rungs down to **12,396 bytes**, the smallest build that still passes the checklist as
 far as it can be judged on this machine: points 2 to 5 by eye, point 1 inferred from unchanged code,
 and points 6 and 7 by script only, because nobody has listened to it or opened it on a phone.
-`SIZE.md` has every rung with its cost and pictures.
+`SIZE.md` has every rung with its cost and pictures. **The operator chose the full build as the
+release** (2026-11-19, T16).
 
 ## 4. System design
 
@@ -518,7 +519,7 @@ native nodes: four-on-the-floor kick, snare, hats, a sixteenth-note bass arpeggi
 chords and a sparse lead with delay, through a generated reverb impulse and a limiter.
 
 A **station** is a small table: tempo, key, chord progression, pattern seeds and patch numbers. Two
-ship. Music never ends: patterns are generated bar by bar from the station's seed.
+ship; the 124 bpm D major one plays first and `R` steps to the 104 bpm A minor one [O: T16]. Music never ends: patterns are generated bar by bar from the station's seed.
 
 The beat drives the picture. While audio runs it writes the beat count and pulse and three band levels
 into `F`; otherwise the engine supplies the same slots from its clock, so the city pulses either way.
@@ -713,6 +714,8 @@ without reading any other task's code.
 | T12 | `T12-app-shell` | `src/main.ts` | T00 |
 | T13 | `T13-art-pass` | `docs/screenshots/**`; a serial window in which it may retune numbers anywhere and log each change | all above |
 | T14 | `T14-squeeze-release` | `SIZE.md`, `README.md`, `LICENSE`, `docs/release/**`; a serial window in which it may edit any path to save bytes, logging each change | all above |
+| T15 | `T15-playtest-fixes` | its plan only; fixes from the first play test, made by the orchestrator in other tasks' paths | T14 |
+| T16 | `T16-track-order-docs` | `BUILD.md`; track order, the size decision, the laconic README, by the orchestrator | T15 |
 
 Every task also owns its own plan file.
 
