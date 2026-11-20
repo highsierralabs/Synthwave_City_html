@@ -129,16 +129,16 @@ running on the GPU, from `file://`:
 
 Not tested: **Firefox and Safari** (nothing in this repository runs them), **any real phone or
 tablet** (phone-sized pictures and start-up times under CPU throttling are desktop stand-ins), whether
-the music sounds good, frame rate on any GPU other than this one, and the touch controls with real
-fingers.
+the music sounds good, and frame rate on any GPU other than this one. The touch controls have been
+tried with real fingers only by the operator (below).
 
 The operator's first play test (2026-11-19) found three defects in the 17,146-byte build: the drag
 turned the view the wrong way, a finger did not fly forward in free flight, and the headlights
 flickered in step. All three are fixed in this build (62 bytes; `plans/T15-playtest-fixes.md`). The
 controls are proven with scripted mouse and touch events (`npm run input`). The flicker never showed
 on this desktop's GPU; it was reproduced and fixed on Chromium's software rasteriser
-(`npm run steady`), and whether that was the flicker the operator saw is for the operator's device
-to confirm.
+(`npm run steady`). On re-testing this build the operator reported the flicker gone and the camera
+working as expected (2026-11-19; device and browser not recorded).
 
 ## Building it
 

@@ -83,6 +83,7 @@ then passing; then the real listeners driven by real mouse and touch events in C
 
 **Human checks (the operator's):** all three fixes on the device and browser where the defects were
 seen. In particular the flicker fix is proven only on Chromium's software rasteriser; see section 12.
+Done by the operator on 2026-11-19: see Progress.
 
 ## 7. Idempotence and recovery
 
@@ -105,6 +106,8 @@ Every command above can be re-run. `git revert` of this task's commit restores t
   older test compared a dragged yaw with the tour's yaw six seconds later and failed by accident of
   the new sign; it now compares at the same moment. `npm run input`: 9 of 9.
 - [x] 2026-11-19 M4. See the evidence in section 12.
+- [x] 2026-11-19 Human check. The operator re-tested the 17,208-byte build and reported: "The
+  flickering is gone and the camera now works as expected." Which device and browser was not stated.
 
 ## 9. Surprises and discoveries
 
@@ -163,10 +166,9 @@ None.
    Proven the same two ways. Measured in the browser check: 21.6 m in the first second with one
    finger (the speed eases in), 133.9 m in a second with two.
 3. Headlight flicker: reproduced on Chromium's software rasteriser and removed there (12.0% mean
-   change a frame in near-white pixels over the road, down to 1.2%). **Whether this is the flicker the
-   operator saw is not known.** It matches the description (every car light, in step, most visible
-   on the white ones), but it was never seen on the operator's desktop GPU from this session, and
-   the operator's phone was not tested.
+   change a frame in near-white pixels over the road, down to 1.2%). It matched the description (every car light, in step, most visible on the white ones) but was
+   never seen on the development GPU. **The operator re-tested and reported the flicker gone**
+   (2026-11-19), so the defect removed here was, as far as the operator's device shows, the one seen.
 
 **Bytes.** 17,146 to 17,208, +62, against a budget of 100. ASCII twin 22,253 to 22,333. Smallest
 rung 12,370 to 12,396. `npm run size`: camera 2,200 of 2,200, street 1,204, backdrop 1,436.
@@ -188,8 +190,8 @@ rung 12,370 to 12,396. `npm run size`: camera 2,200 of 2,200, street 1,204, back
 
 **Not verified.**
 
-- Any of the three fixes on a real phone or tablet, or with a real finger.
-- The flicker fix on the device where the operator saw the flicker.
+- Any of the three fixes on a real phone or tablet, or with a real finger, by anyone but the operator;
+  the operator's report does not name the device or browser.
 - Firefox and Safari, as before.
 - The ladder's pictures, draw counts and pixel differences were not re-made, and the measurements
   of SIZE.md M1 to M3, the unpacker timings and Roadroller were not repeated on the new build.
