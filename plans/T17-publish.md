@@ -1,7 +1,7 @@
 ---
 id: T17-publish
 title: Push to the private remote and prepare GitHub Pages
-status: blocked
+status: done
 depends_on: [T16]
 owns: [plans/T17-publish.md, .github/**]
 reads: [Agents.md, docs/release/**, ../Synthwave_City/.github/workflows/pages.yml]
@@ -76,6 +76,15 @@ repos/highsierralabs/Synthwave_City_html/pages -f build_type=workflow`, then re-
   with a canvas and no console or shader errors. Not checked: the operator's phone or tablet. The
   mapping persists; the server lives only as long as the session that started it. Remove with
   `tailscale serve --http=5182 off`.
+- [x] 2026-11-20 Release, on the operator's instruction ("Go ahead and make the repo public and turn
+  on github.io. Takedown the tailnet and Tailscale mapping on port 5182."). `1e7896d` pushed;
+  `gh repo edit --visibility public` (now PUBLIC, MIT); Pages enabled with `build_type=workflow`;
+  run 44770007503: build and deploy succeeded. The site's `/` and `/safe.html` answer 200 and are
+  byte-identical to the release files; GitHub sends `text/html; charset=utf-8`, and the byte order
+  mark wins over it, as designed (architecture.md, the container). Both pages booted in Chromium on
+  the GPU with a canvas and no errors other than a 404 for `/favicon.ico`, which the site does not
+  have. The preview server was stopped and `tailscale serve --http=5182 off` run; nothing listens on
+  5182 and no mapping names it. Records: Agents.md (Git), a play link in README.md.
 
 ## 9. Surprises and discoveries
 
@@ -97,5 +106,7 @@ None.
 
 ## 12. Outcomes and retrospective
 
-The review copy is served on the tailnet (Progress, 2026-11-20). Open until the operator reviews it
-and decides on making the repository public.
+Public and live at `https://highsierralabs.github.io/Synthwave_City_html/` since 2026-11-20, serving
+the committed release file unchanged. The tailnet preview is removed. Not verified by me: the site
+on the operator's phone or tablet, Firefox and Safari. The workspace paths noted in M1 went public as
+they were, by the operator's decision.

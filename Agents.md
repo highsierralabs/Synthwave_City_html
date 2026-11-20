@@ -476,11 +476,11 @@ screenshot on the RTX says nothing about a phone, and "it renders" is not "it lo
 
 ## Git
 
-- Branch `main`. The remote `origin` is the private `highsierralabs/Synthwave_City_html` (created by
-  the operator, 2026-11-19). Push only when the operator asks; making it public is the operator's
-  decision. `.github/workflows/pages.yml` deploys `docs/release/` to Pages on every push to `main`
-  once the repository is public, so check a commit for home paths, host names and secrets before it
-  goes up.
+- Branch `main`. The remote `origin` is `highsierralabs/Synthwave_City_html`, public and MIT since
+  2026-11-20 (`plans/T17-publish.md`). **A push to `main` publishes:** `.github/workflows/pages.yml`
+  deploys `docs/release/` to `https://highsierralabs.github.io/Synthwave_City_html/`. Push only when
+  the operator asks, never force-push, and check a commit for home paths, host names and secrets
+  before it goes up.
 - Commit small and often with a plain message saying what changed; one commit per finished milestone
   or task is the norm. During a parallel wave only the orchestrator commits.
 - Commits use the repo-local identity already configured. No AI attribution or co-author trailers.

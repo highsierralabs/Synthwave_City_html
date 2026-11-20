@@ -15,7 +15,10 @@ and Web Audio. It rebuilds [Synthwave City](https://github.com/highsierralabs/Sy
 
 ## Run it
 
-Download [`docs/release/synthwave-city.html`](docs/release/synthwave-city.html) and open it in a
+**Play it in the browser:** <https://highsierralabs.github.io/Synthwave_City_html/> (the same file;
+[`safe.html`](https://highsierralabs.github.io/Synthwave_City_html/safe.html) is the ASCII copy).
+
+Or download [`docs/release/synthwave-city.html`](docs/release/synthwave-city.html) and open it in a
 current Chrome or Edge: double-click it on a PC, or open it from the file manager on a phone. Click or
 tap for sound. Move it as a file, never as pasted text: it is UTF-16 and pasting breaks it. If a
 device shows text or nothing, use [`synthwave-city.safe.html`](docs/release/synthwave-city.safe.html)
