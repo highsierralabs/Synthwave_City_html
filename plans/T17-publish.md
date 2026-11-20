@@ -63,7 +63,11 @@ repos/highsierralabs/Synthwave_City_html/pages -f build_type=workflow`, then re-
   T07, T09, T13 and T15 (they point at the parent project on this machine).
 - [x] 2026-11-19 M2. Blocked: `POST /repos/.../pages` answered 422, "Your current plan does not
   support GitHub Pages for this repository."
-- [ ] M3, M4: see the commit and the report.
+- [x] 2026-11-19 M3. Workflow and records committed (`d6f6d59`); `origin` added; `git push -u origin
+  main`; `git ls-remote origin main` = local HEAD `d6f6d59`.
+- [x] 2026-11-19 M4. Run 44686037113: build job success in 6 s, deploy job skipped (private). The
+  downloaded `github-pages` artifact holds `index.html` and `safe.html` byte-identical to
+  `docs/release/synthwave-city.html` and `.safe.html`, and `LICENSE`.
 
 ## 9. Surprises and discoveries
 
